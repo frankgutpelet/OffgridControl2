@@ -1,54 +1,44 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import json
 
-class IInverter(ABC):
+@dataclass
+class InverterValues:
+    # Solar String Values
+    VoltageSolar1: float
+    CurrentSolar1: float
+    PowerSolar1: int
+    VoltageSolar2: float
+    CurrentSolar2: float
+    PowerSolar2: float
 
-    @dataclass
-    class InverterValues:
-        #Solar String Values
-        VoltageSolar1 : float
-        CurrentSolar1 : float
-        PowerSolar1 : int
-        VoltageSolar2 : float
-        CurrentSolar2 : float
-        PowerSolar2 : float
+    # Battery values
+    SOC: int
+    BatteryVoltage: float
+    BatteryCurrent: float
+    BatteryPower: int
 
-        #Battery values
-        SOC : int
-        BatteryVoltage : float
-        BatteryCurrent : float
-        BatteryPower : int
+    # Inverter Values
+    InverterInputVoltage: float
+    InverterInputCurrent: float
+    InverterInputPower: int
+    InverterOutputPower: int
 
-        #Inverter Values
-        InverterInputVoltage: float
-        InverterInputCurrent : float
-        InverterInputPower : int
-        InverterOutputPower : int
+    def __post_init__(self):
+        """Konvertiert Strings automatisch in float/int, falls nötig."""
+        for field, field_type in self.__annotations__.items():
+            value = getattr(self, field)
+            if isinstance(value, str):  # Nur wenn Wert als String kam
+                if field_type == int:
+                    setattr(self, field, int(value))
+                elif field_type == float:
+                    setattr(self, field, float(value))
 
-        def toString(self):
-            return json.dumps({
-                # Solar String Values
-                "VoltageSolar1": self.VoltageSolar1,
-                "CurrentSolar1": self.CurrentSolar1,
-                "PowerSolar1": self.PowerSolar1,
-                "VoltageSolar2": self.VoltageSolar2,
-                "CurrentSolar2": self.CurrentSolar2,
-                "PowerSolar2": self.PowerSolar2,
+    def toString(self):
+        """JSON-Export"""
+        return json.dumps(self.__dict__)
 
-                # Battery values
-                "SOC": self.SOC,
-                "BatteryVoltage": self.BatteryVoltage,
-                "BatteryCurrent": self.BatteryCurrent,
-                "BatteryPower": self.BatteryPower,
-
-                # Inverter Values
-                "InverterInputVoltage": self.InverterInputVoltage,
-                "InverterInputCurrent": self.InverterInputCurrent,
-                "InverterInputPower": self.InverterInputPower,
-                "InverterOutputPower": self.InverterOutputPower
-            })
-
-    @abstractmethod
-    def getValues(self) -> "IInverter.InverterValues":
-        raise NotImplementedError
+    @classmethod
+    def from_json(cls, json_str: str):
+        """Erstellt eine Instanz direkt aus JSON-String (wie von toString)."""
+        data = json.loads(json_str)
+        return cls(**data)
