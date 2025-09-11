@@ -7,10 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from TempReader import TempReader
 import requests
 import json
-import sys
-import os
 import socket
-
 from IInverter import IInverter
 
 # Create your views here.
