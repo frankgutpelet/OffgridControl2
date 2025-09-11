@@ -1,44 +1,51 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import json
 
-@dataclass
-class InverterValues:
-    # Solar String Values
-    VoltageSolar1: float
-    CurrentSolar1: float
-    PowerSolar1: int
-    VoltageSolar2: float
-    CurrentSolar2: float
-    PowerSolar2: float
+class IInverter(ABC):
 
-    # Battery values
-    SOC: int
-    BatteryVoltage: float
-    BatteryCurrent: float
-    BatteryPower: int
+    @dataclass
+    class InverterValues:
+        # Solar String Values
+        VoltageSolar1: float
+        CurrentSolar1: float
+        PowerSolar1: int
+        VoltageSolar2: float
+        CurrentSolar2: float
+        PowerSolar2: float
 
-    # Inverter Values
-    InverterInputVoltage: float
-    InverterInputCurrent: float
-    InverterInputPower: int
-    InverterOutputPower: int
+        # Battery values
+        SOC: int
+        BatteryVoltage: float
+        BatteryCurrent: float
+        BatteryPower: int
 
-    def __post_init__(self):
-        """Konvertiert Strings automatisch in float/int, falls nötig."""
-        for field, field_type in self.__annotations__.items():
-            value = getattr(self, field)
-            if isinstance(value, str):  # Nur wenn Wert als String kam
-                if field_type == int:
-                    setattr(self, field, int(value))
-                elif field_type == float:
-                    setattr(self, field, float(value))
+        # Inverter Values
+        InverterInputVoltage: float
+        InverterInputCurrent: float
+        InverterInputPower: int
+        InverterOutputPower: int
 
-    def toString(self):
-        """JSON-Export"""
-        return json.dumps(self.__dict__)
+        def __post_init__(self):
+            """Konvertiert Strings automatisch in float/int, falls nötig."""
+            for field, field_type in self.__annotations__.items():
+                value = getattr(self, field)
+                if isinstance(value, str):  # Nur wenn Wert als String kam
+                    if field_type == int:
+                        setattr(self, field, int(value))
+                    elif field_type == float:
+                        setattr(self, field, float(value))
 
-    @classmethod
-    def from_json(cls, json_str: str):
-        """Erstellt eine Instanz direkt aus JSON-String (wie von toString)."""
-        data = json.loads(json_str)
-        return cls(**data)
+        def toString(self):
+            """JSON-Export"""
+            return json.dumps(self.__dict__)
+
+        @classmethod
+        def from_json(cls, json_str: str):
+            """Erstellt eine Instanz direkt aus JSON-String (wie von toString)."""
+            data = json.loads(json_str)
+            return cls(**data)
+
+    @abstractmethod
+    def getValues(self) -> "IInverter.InverterValues":
+        raise NotImplementedError
