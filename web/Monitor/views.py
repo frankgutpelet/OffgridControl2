@@ -11,8 +11,7 @@ import sys
 import os
 import socket
 
-from IInverter.IInverter import InverterValues
-
+from IInverter import IInverter
 
 # Create your views here.
 
@@ -34,7 +33,7 @@ def getDeviceTable(inverterValues : InverterValues):
 def index(request):
 
     socketResponse = ReadSocketValues()
-    inverterValues = InverterValues.from_json(socketResponse.split("|"))
+    inverterValues = IInverter.InverterValues.from_json(socketResponse.split("|"))
 
     deviceTable = getDeviceTable(inverterValues)
 
@@ -45,7 +44,7 @@ def index(request):
                       {'batV': str(inverterValues.BatteryVoltage), 'batI': str(inverterValues.BatteryCurrent), 'solV': str(inverterValues.VoltageSolar1),
                        'solarSupply': 'Mains', 'chargingState': 'unknown',
                        'solarPower': str(inverterValues.PowerSolar1 + inverterValues.PowerSolar2), 'today' : '',
-                       'yesterday' : '', 'sumI' : str(inverterValues.CurrentSolar1 + InverterValues.CurrentSolar2), 'soc' : str(InverterValues.SOC),
+                       'yesterday' : '', 'sumI' : str(inverterValues.CurrentSolar1 + IInverter.InverterValues.CurrentSolar2), 'soc' : str(IInverter.InverterValues.SOC),
                        'deviceTable': unescape(deviceTable), 'temperaturTable' : unescape(getTemperatures())})
 
 def ChangeSettings(device : str, mode : str):
@@ -113,7 +112,7 @@ def monitor_data(request):
         'yesterday': str(victronReader.yesterday),
         'sumI': str(victronReader.sumI),
         'soc': str(victronReader.soc),
-        'sumP' : str(calcSupP()),
+        'sumP' : str(),
         'deviceTable' : getDeviceTable()
     }
     return JsonResponse(data)
