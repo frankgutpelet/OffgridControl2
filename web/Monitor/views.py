@@ -11,8 +11,8 @@ import sys
 import os
 import socket
 
-# Zwei Ebenen höher gehen
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from IInverter import InverterValues
 
@@ -52,7 +52,7 @@ def index(request):
                        'deviceTable': unescape(deviceTable), 'temperaturTable' : unescape(getTemperatures())})
 
 def ChangeSettings(device : str, mode : str):
-    return 
+    return
     settings = Settings("../Settings.xml")
     app = settings.getApproval(device)
     app.mode = mode
