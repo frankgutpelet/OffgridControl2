@@ -22,7 +22,7 @@ def main():
     consumerIndex = 0
     logger = Logging()
     logger.setLogLevel("DEBUG")
-    settings = Settings.from_xml_file("settings.xml")
+    settings = Settings.from_xml_file("Settings.xml")
     consumers = settings.apps
     inverter = SPF6000Inverter()
     supplySwitch = SonoffSwitch()
