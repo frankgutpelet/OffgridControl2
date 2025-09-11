@@ -92,27 +92,8 @@ def getTemperatures():
 
 
 def monitor_data(request):
-    global victronReader
+    return None
 
-    deviceTable = str()
-    for device in victronReader.devices:
-        deviceTable += makeTableEntry(device['name'], device['state'])
-    # Abrufen der aktuellen Daten
-    data = {
-        'batV': victronReader.batV,
-        'batI': victronReader.batI,
-        'solV': victronReader.solV,
-        'solarSupply': victronReader.supply,
-        'chargingState': victronReader.chargemode,
-        'solarPower': str(round(float(victronReader.batV) * float(victronReader.batI))),
-        'today': str(victronReader.today),
-        'yesterday': str(victronReader.yesterday),
-        'sumI': str(victronReader.sumI),
-        'soc': str(victronReader.soc),
-        'sumP' : str(),
-        'deviceTable' : getDeviceTable()
-    }
-    return JsonResponse(data)
 
 def ReadSocketValues():
     while True:
