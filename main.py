@@ -34,9 +34,10 @@ def main():
 
 
     while(True):
-        if handleOvercurrent():
+        inverterValues = inverter.getValues()
+        if handleOvercurrent(settings.battery, inverterValues.BatteryCurrent):
             continue
-        if handleMinimalSOC():
+        if handleMinimalSOC(settings.battery, inverterValues.SOC):
             continue
         handleNextConsumer(settings.battery, settings.inverter)
         attentiveTimeout(10, settings.battery)
