@@ -5,4 +5,4 @@ inverter = SPF6000Inverter()
 
 values = inverter.getValues()
 
-print(json.dumps(values))
+print(values.toString())
