@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from html import unescape
-from Settings import Settings
+#from Settings import Settings
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
@@ -52,6 +52,7 @@ def index(request):
                        'deviceTable': unescape(deviceTable), 'temperaturTable' : unescape(getTemperatures())})
 
 def ChangeSettings(device : str, mode : str):
+    return 
     settings = Settings("../Settings.xml")
     app = settings.getApproval(device)
     app.mode = mode
