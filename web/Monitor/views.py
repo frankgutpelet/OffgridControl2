@@ -21,7 +21,7 @@ def makeTableEntry(key, value):
            "<td> <button class=\"device-button\" data-device=\"" + key + "\" data-mode=\"OFF\">OFF</button> </td>\n" + \
            "</tr>"
 
-def getDeviceTable(inverterValues : InverterValues):
+def getDeviceTable(inverterValues : IInverter.InverterValues):
     #deviceTable = str()
     #for device in victronReader.devices:
     #    deviceTable += makeTableEntry(device['name'], device['state'])
