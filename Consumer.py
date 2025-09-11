@@ -40,10 +40,12 @@ class Consumer():
         self.prio = settings.prio
         self.logger = logger
         self.timestampOn = 0
-        self.minTime = int(settings.minTimeRunningMinutes)
+        self.minTime = 0
         self.prohibitCounter = 0
         self.soc = settings.soc
 
+        if settings.minTimeRunningMinutes:
+            self.minTime = int(settings.minTimeRunningMinutes)
         if  0 < len(settings.timers):
             self.timeswitch = TimeSwitch(settings.timers)
         else:
