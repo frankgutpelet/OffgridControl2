@@ -21,7 +21,7 @@ def main():
 
     consumerIndex = 0
     logger = Logging()
-    logger.setLogLevel(Logging.LOGGLEVEL_DEBUG)
+    logger.setLogLevel("DEBUG")
     settings = Settings.from_xml_file("settings.xml")
     consumers = settings.apps
     inverter = SPF6000Inverter()
