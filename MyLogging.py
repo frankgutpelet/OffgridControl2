@@ -31,18 +31,6 @@ class Logging:
                     print(e)
                 self.__lock_logBuffer.release()
 
-            if len(self.cvsBuffer) >= 1:
-                try:
-                    logfile = open("log/valuess_" + datetime.datetime.today().strftime("%Y-%m-%d") + ".csv", "a")
-                    self.__lock_cvsBuffer.acquire()
-                    for entry in self.cvsBuffer:
-                        logfile.write(entry)
-                    logfile.close()
-                    self.cvsBuffer.clear()
-                    self.__lock_cvsBuffer.release()
-                except Exception:  # logging should not lead to an exception
-                    self.Error("Cannot write to CVS")
-
             time.sleep(5)
 
     def Debug(self, string):
