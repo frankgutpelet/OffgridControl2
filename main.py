@@ -24,7 +24,7 @@ def main():
     logger.setLogLevel("DEBUG")
     settings = Settings.from_xml_file("Settings.xml")
     consumers = settings.apps
-    inverter = SPF6000Inverter()
+    inverter = SPF6000Inverter(logger)
     supplySwitch = SonoffSwitch()
     frontEnd = FrontendInterface(logger)
 

@@ -1,12 +1,14 @@
 from IInverter import IInverter
 from pymodbus.client import ModbusSerialClient
+from MyLogging import Logging
 
 class SPF6000Inverter(IInverter):
     """
     Implementation for Growatt SPF 6000 ES Plus
     """
-
-    def __init__(self, port="/dev/ttyUSB0", baudrate=9600, unit=1):
+    logger : Logging
+    def __init__(self, logger : Logging, port="/dev/ttyUSB0", baudrate=9600, unit=1):
+        self.logger = logger
         self.client = ModbusSerialClient(
             port=port,
             framer="rtu",
@@ -20,13 +22,19 @@ class SPF6000Inverter(IInverter):
 
     def read_register(self, addr, count=1):
         """Hilfsfunktion zum Lesen von Input-Registers"""
-        result = self.client.read_input_registers(address=addr, count=count, slave=self.unit)
+        try:
+            result = self.client.read_input_registers(address=addr, count=count, slave=self.unit)
+        except:
+            self.logger.Debug("Communication with Growatt Inverter failed ")
+            return [0]
         if result.isError():
-            return None
+            return [0]
         return result.registers
 
     def read_32bit(self, addr):
         regs = self.read_register(addr, count=2)
+        if len(regs) < 4:
+            return 0
         if regs is None:
             return None
         return self.client.convert_from_registers(

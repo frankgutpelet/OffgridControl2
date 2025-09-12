@@ -28,9 +28,10 @@ def getDeviceTable(inverterValues : IInverter.InverterValues):
     return list()
 
 def index(request):
-
+    print("Monitor triggered")
     socketResponse = ReadSocketValues()
-    inverterValues = IInverter.InverterValues.from_json(socketResponse.split("|"))
+    print("Socket Values: " + socketResponse)
+    inverterValues = IInverter.InverterValues.from_json(socketResponse.split("|")[0])
 
     deviceTable = getDeviceTable(inverterValues)
 
@@ -41,7 +42,7 @@ def index(request):
                       {'batV': str(inverterValues.BatteryVoltage), 'batI': str(inverterValues.BatteryCurrent), 'solV': str(inverterValues.VoltageSolar1),
                        'solarSupply': 'Mains', 'chargingState': 'unknown',
                        'solarPower': str(inverterValues.PowerSolar1 + inverterValues.PowerSolar2), 'today' : '',
-                       'yesterday' : '', 'sumI' : str(inverterValues.CurrentSolar1 + IInverter.InverterValues.CurrentSolar2), 'soc' : str(IInverter.InverterValues.SOC),
+                       'yesterday' : '', 'sumI' : str(inverterValues.CurrentSolar1 + inverterValues.CurrentSolar2), 'soc' : str(inverterValues.SOC),
                        'deviceTable': unescape(deviceTable), 'temperaturTable' : unescape(getTemperatures())})
 
 def ChangeSettings(device : str, mode : str):
@@ -112,9 +113,11 @@ def ReadSocketValues():
                                     break
                             return data
                         except:
+                            print("No values from socket")
                             conn.close()
                             s.close()
         except:
+            print("Socket connection failed")
             continue
 
 @csrf_exempt
