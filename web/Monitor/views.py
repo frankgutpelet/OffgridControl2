@@ -9,6 +9,7 @@ import requests
 import json
 import socket
 from IInverter import IInverter
+import time
 
 # Create your views here.
 
@@ -91,34 +92,40 @@ def getTemperatures():
     return table
 
 
-
+# überträgt die daten zyklisch zum frontend
 def monitor_data(request):
-    return None
+    socketResponse = ReadSocketValues()
+    print("Socket Values: " + socketResponse)
+    inverterValues = IInverter.InverterValues.from_json(socketResponse.split("|")[0])
+
+
+    data = {
+        'batV': str(inverterValues.BatteryVoltage),
+        'batI': str(inverterValues.BatteryCurrent),
+        'solV': str(inverterValues.VoltageSolar1),
+        'solarSupply': 'Mains',
+        'chargingState': 'unknown',
+        'solarPower': str(inverterValues.PowerSolar1 + inverterValues.PowerSolar2),
+        'today': '',
+        'yesterday': '',
+        'sumI': str(inverterValues.BatteryCurrent),
+        'soc': str(inverterValues.SOC),
+        'sumP': str(inverterValues.BatteryPower),
+        'deviceTable': getDeviceTable(None)
+    }
+    return JsonResponse(data)
 
 
 def ReadSocketValues():
-    while True:
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('localhost', 23456))
-                while True:
-                    s.listen()
-                    conn, addr = s.accept()
-                    with conn:
-                        try:
-                            data = ""
-                            while True:
-                                data += conn.recv(2048).decode()
-                                if "" != data:
-                                    break
-                            return data
-                        except:
-                            print("No values from socket")
-                            conn.close()
-                            s.close()
-        except:
-            print("Socket connection failed")
-            continue
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect(('localhost', 23456))
+            data = s.recv(2048)
+            message = data.decode() if data else None
+            return message
+    except ConnectionRefusedError:
+        print("Server nicht erreichbar")
 
 @csrf_exempt
 def update_device(request):
