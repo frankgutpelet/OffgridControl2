@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from html import unescape
-#from Settings import Settings
+from Settings import Settings
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
@@ -12,47 +12,51 @@ from IInverter import IInverter
 import time
 
 # Create your views here.
+socketConnection = None
 
-def makeTableEntry(key, value):
+def makeTableEntry(key, state, mode):
     return "<tr>\n" + \
            "<td class=\"auto-style2\" style=\"width: 484px\"><strong>" + key + "</strong></td>\n" + \
-           "<td class=\"auto-style2\"><strong>" + value + "</strong></td>\n" + \
+           "<td class=\"auto-style2\"><strong>" + state + "</strong></td>\n" + \
+           "<td class=\"auto-style2\"><strong>" + mode + "</strong></td>\n" + \
            "<td> <button class=\"device-button\" data-device=\"" + key + "\" data-mode=\"ON\">ON</button> </td>\n" + \
            "<td> <button class=\"device-button\" data-device=\"" + key + "\" data-mode=\"AUTO\">AUTO</button> </td>\n" + \
            "<td> <button class=\"device-button\" data-device=\"" + key + "\" data-mode=\"OFF\">OFF</button> </td>\n" + \
            "</tr>"
 
-def getDeviceTable(inverterValues : IInverter.InverterValues):
-    #deviceTable = str()
-    #for device in victronReader.devices:
-    #    deviceTable += makeTableEntry(device['name'], device['state'])
-    return list()
+def getDeviceTable(devices : list):
+    deviceTable = "<tr>\n" + \
+           "<td class=\"auto-style2\" style=\"width: 484px\"><strong>CONSUMER</strong></td>\n" + \
+           "<td class=\"auto-style2\"><strong>Status</strong></td>\n" + \
+           "<td class=\"auto-style2\"><strong>Modus</strong></td>\n"
+    for device in devices:
+        state = 'OFF'
+        if device['isOn']:
+            state = 'ON'
+        deviceTable += makeTableEntry(device['name'], state, device['mode'].upper())
+    return deviceTable
 
 def index(request):
     print("Monitor triggered")
-    socketResponse = ReadSocketValues()
-    print("Socket Values: " + socketResponse)
-    inverterValues = IInverter.InverterValues.from_json(socketResponse.split("|")[0])
 
-    deviceTable = getDeviceTable(inverterValues)
 
     if 'mode' in request.GET:
         ChangeSettings(request.GET['device'], request.GET['mode'])
 
     return render(request, 'Monitor/base.html',
-                      {'batV': str(inverterValues.BatteryVoltage), 'batI': str(inverterValues.BatteryCurrent), 'solV': str(inverterValues.VoltageSolar1),
+                      {'batV': 'unknown', 'batI': 'unknown', 'solV': 'unknown',
                        'solarSupply': 'Mains', 'chargingState': 'unknown',
-                       'solarPower': str(inverterValues.PowerSolar1 + inverterValues.PowerSolar2), 'today' : '',
-                       'yesterday' : '', 'sumI' : str(inverterValues.CurrentSolar1 + inverterValues.CurrentSolar2), 'soc' : str(inverterValues.SOC),
-                       'deviceTable': unescape(deviceTable), 'temperaturTable' : unescape(getTemperatures())})
+                       'solarPower': 'unknown', 'today' : '',
+                       'yesterday' : '', 'sumI' : 'unknown', 'soc' : 'unknown',
+                       'deviceTable': 'unknown', 'temperaturTable' : 'unknown'})
 
 def ChangeSettings(device : str, mode : str):
-    return
-    settings = Settings("../Settings.xml")
-    app = settings.getApproval(device)
-    app.mode = mode
-    settings.changeApproval(app.name, app)
-    settings.save()
+    settings = Settings.from_xml_file("../Settings.xml")
+    for app in settings.apps:
+        if app.name == device:
+            app.mode = mode
+            print("Change " + device + " to mode: " + mode )
+    settings.to_xml_file("../Settings.xml")
 
 
 def getTemperatures():
@@ -94,9 +98,15 @@ def getTemperatures():
 
 # überträgt die daten zyklisch zum frontend
 def monitor_data(request):
-    socketResponse = ReadSocketValues()
-    print("Socket Values: " + socketResponse)
-    inverterValues = IInverter.InverterValues.from_json(socketResponse.split("|")[0])
+    print("Wait for socket values...")
+    socketResponse = ""
+    try:
+        socketResponse = json.loads(ReadSocketValues())
+        print("Socket Values: " + json.dumps(socketResponse))
+        inverterValues = IInverter.InverterValues.from_json(socketResponse['data']['inverter'])
+    except:
+        print("Cannot parse string as json: " + socketResponse)
+        return  JsonResponse(data = {})
 
 
     data = {
@@ -111,21 +121,33 @@ def monitor_data(request):
         'sumI': str(inverterValues.BatteryCurrent),
         'soc': str(inverterValues.SOC),
         'sumP': str(inverterValues.BatteryPower),
-        'deviceTable': getDeviceTable(None)
+        'deviceTable': getDeviceTable(socketResponse['data']['devices'])
     }
     return JsonResponse(data)
 
 
 def ReadSocketValues():
-
+    global socketConnection
+    if not socketConnection:
+        socketConnection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socketConnection.connect(('localhost', 23456))
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect(('localhost', 23456))
-            data = s.recv(2048)
-            message = data.decode() if data else None
-            return message
-    except ConnectionRefusedError:
-        print("Server nicht erreichbar")
+        data = socketConnection.recv(4096)
+        if data:
+            return data.decode()
+        else:
+            raise Exception()
+    except:
+        print("Server nicht erreichbar - neuverbinden")
+        #socketConnection.close()
+        time.sleep(1)
+        socketConnection.connect(('localhost', 23456))
+        data = socketConnection.recv(4096)
+        if data:
+            print("Received Data after reconnect: " + data.decode())
+            return data.decode()
+        else:
+            raise Exception("Could not reconnect to server")
 
 @csrf_exempt
 def update_device(request):

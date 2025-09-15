@@ -1,12 +1,17 @@
 import socket
 from MyLogging import Logging
+import traceback
 
 class FrontendInterface:
     def __init__(self, logger: Logging):
         self.logger = logger
         # Server-Socket dauerhaft offen halten
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind(('localhost', 23456))
+        try:
+            self.server.bind(('localhost', 23456))
+        except:
+            logger.Error("Server nicht verbunden: " + traceback.format_exc())
+            return
         self.server.listen()
         self.logger.Debug("Server (Sender) läuft auf localhost:23456")
         self.conn = None
@@ -20,7 +25,7 @@ class FrontendInterface:
         self.wait_for_client()
         try:
             self.conn.sendall(message.encode())
-            self.logger.Debug(f"Gesendet: {message}")
+            #self.logger.Debug(f"Gesendet: {message}")
         except BrokenPipeError:
             self.logger.Error("Client hat die Verbindung getrennt")
             self.conn.close()

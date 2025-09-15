@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+import xml.dom.minidom as minidom
 from typing import List, Optional
 from datetime import time
 
@@ -61,6 +62,12 @@ class Settings:
         self.inverter = inverter
         self.logging = logging
         self.apps = apps
+
+    def getAppByName(self, name : str):
+        for app in self.apps:
+            if name == app.name:
+                return app
+        return None
 
     @staticmethod
     def from_xml_file(xml_file: str):
@@ -152,6 +159,11 @@ class Settings:
                 timer_elem.set("on", timer.on.strftime("%H:%M"))
                 timer_elem.set("off", timer.off.strftime("%H:%M"))
 
-        # XML schreiben
-        tree = ET.ElementTree(root)
-        tree.write(xml_file, encoding="utf-8", xml_declaration=True)
+        # In einen String konvertieren
+        xml_str = ET.tostring(root, encoding="utf-8")
+        # Mit minidom schön formatieren
+        pretty_xml = minidom.parseString(xml_str).toprettyxml(indent="  ")
+
+        # In Datei schreiben
+        with open(xml_file, "w", encoding="utf-8") as f:
+            f.write(pretty_xml)

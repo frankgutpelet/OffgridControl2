@@ -36,14 +36,16 @@ class IInverter(ABC):
                     elif field_type == float:
                         setattr(self, field, float(value))
 
+        def toJson(self):
+            return self.__dict__
+
         def toString(self):
             """JSON-Export"""
             return json.dumps(self.__dict__)
 
         @classmethod
-        def from_json(cls, json_str: str):
-            """Erstellt eine Instanz direkt aus JSON-String (wie von toString)."""
-            data = json.loads(json_str)
+        def from_json(cls, data: dict):
+            """Erstellt eine Instanz direkt aus JSON"""
             return cls(**data)
 
     @abstractmethod

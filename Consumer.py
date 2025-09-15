@@ -55,6 +55,8 @@ class Consumer():
         if 'On' == self.mode:
             self.isOn = True
 
+    def updateSettings(self, settings : App):
+        self.mode = settings.mode
 
     def approve(self, soc : int):
         oldState = self.isOn
@@ -109,6 +111,12 @@ class Consumer():
             if response:
                 self.logger.Error("Response: " + str(response))
 
+    def toJson(self):
+        return {
+            "name" : self.name,
+            "mode" : self.mode,
+            "isOn": self.isOn
+        }
 
 
     def onTime(self):

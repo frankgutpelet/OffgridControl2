@@ -1,12 +1,14 @@
 from IInverter import IInverter
 from pymodbus.client import ModbusSerialClient
 from MyLogging import Logging
+import traceback
 
 class SPF6000Inverter(IInverter):
     """
     Implementation for Growatt SPF 6000 ES Plus
     """
     logger : Logging
+    inverterOfflineCounter : int
     def __init__(self, logger : Logging, port="/dev/ttyUSB0", baudrate=9600, unit=1):
         self.logger = logger
         self.client = ModbusSerialClient(
@@ -19,13 +21,17 @@ class SPF6000Inverter(IInverter):
             timeout=2,
         )
         self.unit = unit
+        self.inverterOfflineCounter = 0
 
     def read_register(self, addr, count=1):
+        if 0 != self.inverterOfflineCounter:
+            return [0]
         """Hilfsfunktion zum Lesen von Input-Registers"""
         try:
             result = self.client.read_input_registers(address=addr, count=count, slave=self.unit)
         except:
             self.logger.Debug("Communication with Growatt Inverter failed ")
+            self.inverterOfflineCounter = 10
             return [0]
         if result.isError():
             return [0]
@@ -43,6 +49,25 @@ class SPF6000Inverter(IInverter):
         )
 
     def getValues(self) -> IInverter.InverterValues:
+        if 0 != self.inverterOfflineCounter:
+            self.logger.Debug("Inverter timeout")
+            self.inverterOfflineCounter -= 1
+            return IInverter.InverterValues(
+                VoltageSolar1=0,
+                CurrentSolar1=0,
+                PowerSolar1=0,
+                VoltageSolar2=0,
+                CurrentSolar2=0,
+                PowerSolar2=0,
+                SOC=0,
+                BatteryVoltage=0,
+                BatteryCurrent=0,
+                BatteryPower=0,
+                InverterInputVoltage=0,
+                InverterInputCurrent=0,
+                InverterInputPower=0,
+                InverterOutputPower=0
+            )
         if not self.client.connect():
             raise ConnectionError("Inverter connection failed")
 
