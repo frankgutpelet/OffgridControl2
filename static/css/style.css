@@ -162,3 +162,19 @@ table tr:hover {
 .button:hover {
     background-color: #0056b3;
 }
+
+.image-container {
+    text-align: center;       /* Bild zentrieren */
+    margin: 20px 0;
+    border: 2px solid #007BFF;
+    border-radius: 8px;
+}
+
+#panel-image {
+    max-width: 100%;          /* Bild maximal so breit wie der Container */
+    height: auto;             /* Höhe proportional anpassen */
+    border-radius: 8px;       /* optional, abgerundete Ecken */
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
