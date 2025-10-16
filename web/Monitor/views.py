@@ -47,8 +47,8 @@ def index(request):
                       {'batV': 'unknown', 'batI': 'unknown', 'solV': 'unknown',
                        'solarSupply': 'Mains', 'chargingState': 'unknown',
                        'solarPower': 'unknown', 'today' : '',
-                       'yesterday' : '', 'sumI' : 'unknown', 'soc' : 'unknown',
-                       'deviceTable': 'unknown', 'temperaturTable' : 'unknown'})
+                       'yesterday' : '', 'panI' : 'unknown', 'soc' : 'unknown',
+                       'deviceTable': 'unknown', 'temperaturTable' : getTemperatures()})
 
 def ChangeSettings(device : str, mode : str):
     settings = Settings.from_xml_file("../Settings.xml")
@@ -98,29 +98,37 @@ def getTemperatures():
 
 # überträgt die daten zyklisch zum frontend
 def monitor_data(request):
+    global socketConnection
     print("Wait for socket values...")
     socketResponse = ""
     try:
-        socketResponse = json.loads(ReadSocketValues())
+        values = ReadSocketValues()
+        print("Parse json string: " + values)
+        socketResponse = json.loads(values)
         print("Socket Values: " + json.dumps(socketResponse))
         inverterValues = IInverter.InverterValues.from_json(socketResponse['data']['inverter'])
     except:
         print("Cannot parse string as json: " + socketResponse)
+        try:
+            socketConnection.close()
+        except:
+            pass
+        socketConnection.connect(('localhost', 23456))
         return  JsonResponse(data = {})
 
 
     data = {
         'batV': str(inverterValues.BatteryVoltage),
         'batI': str(inverterValues.BatteryCurrent),
-        'solV': str(inverterValues.VoltageSolar1),
-        'solarSupply': 'Mains',
-        'chargingState': 'unknown',
+        'solV': str(inverterValues.VoltageSolar2),
+        'solarSupply': socketResponse['data']['switch'],
         'solarPower': str(inverterValues.PowerSolar1 + inverterValues.PowerSolar2),
         'today': '',
         'yesterday': '',
-        'sumI': str(inverterValues.BatteryCurrent),
+        'panI': str(inverterValues.CurrentSolar2 + inverterValues.CurrentSolar1),
         'soc': str(inverterValues.SOC),
-        'sumP': str(inverterValues.BatteryPower),
+        'sumP': str(-inverterValues.BatteryPower),
+        'consP' : str(inverterValues.InverterOutputPower),
         'deviceTable': getDeviceTable(socketResponse['data']['devices'])
     }
     return JsonResponse(data)
@@ -128,21 +136,21 @@ def monitor_data(request):
 
 def ReadSocketValues():
     global socketConnection
+    data = None
     if not socketConnection:
+        print("reconnect Socket")
         socketConnection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socketConnection.connect(('localhost', 23456))
     try:
-        data = socketConnection.recv(4096)
+        data = socketConnection.recv(8192)
         if data:
+            print("Received Data " + data.decode())
             return data.decode()
         else:
             raise Exception()
     except:
         print("Server nicht erreichbar - neuverbinden")
-        #socketConnection.close()
-        time.sleep(1)
-        socketConnection.connect(('localhost', 23456))
-        data = socketConnection.recv(4096)
+        socketConnection = None
         if data:
             print("Received Data after reconnect: " + data.decode())
             return data.decode()
@@ -166,3 +174,4 @@ def update_device(request):
         return JsonResponse(result)
 
     return JsonResponse({"status": "error", "message": "Ungültige Anfrage"})
+

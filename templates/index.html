@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Monitor</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+</head>
+<body>
+
+<header>
+    <h1>Power Monitor</h1>
+</header>
+
+<div class="container">
+
+    <!-- obere Anzeige -->
+    <div class="top-symbols">
+        <div class="battery-container">
+            <div class="battery-icon">
+                <div class="battery-level" id="battery-level" style="height: 0%; background-color: red;"></div>
+            </div>
+            <p>Ladezustand: <strong id="soc-display">--%</strong></p>
+        </div>
+
+        <div class="arrow" id="arrow">&#8595;</div>
+
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="tachometer-container">
+                <div class="tachometer-background"></div>
+                <div class="tachometer-pointer" id="tachometer-pointer"></div>
+            </div>
+            <div class="tachometer-label" id="tachometer-label">-- W</div>
+        </div>
+    </div>
+
+    <!-- Tabellenbereich -->
+    <div class="table-container">
+        <table>
+            <tr><th>Batteriespannung</th><td><strong id="batV">-- V</strong></td></tr>
+            <tr><th>Batteriestrom</th><td><strong id="batI">-- A</strong></td></tr>
+            <tr><th>Panelstrom</th><td><strong id="pan1I">-- A</strong></td></tr>
+            <tr><th>Panelstrom2</th><td><strong id="pan2I">-- A</strong></td></tr>
+            <tr><th>Panelspannung Ost</th><td><strong id="sol1V">-- V</strong></td></tr>
+            <tr><th>Panelspannung West</th><td><strong id="sol2V">-- V</strong></td></tr>
+            <tr><th>Solarleistung Ost</th><td><strong id="solar1Power">-- W</strong></td></tr>
+            <tr><th>Solarleistung West</th><td><strong id="solar2Power">-- W</strong></td></tr>
+            <tr><th>Gesamtverbrauch</th><td><strong id="sumP">-- W</strong></td></tr>
+            <tr><th>Versorgung</th><td><strong id="solarSupply">--</strong></td></tr>
+            <tr><th>SOC</th><td><strong id="soc">-- %</strong></td></tr>
+        </table>
+    </div>
+
+    <!-- Gerätestatus -->
+    <div class="table-container">
+        <div class="table-title">Verbraucher</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Modus</th>
+                    <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody id="device-table"></tbody>
+        </table>
+    </div>
+    <div class="table-container">
+
+      <!-- Temperaturen -->
+    <div class="table-container">
+        <div class="table-title">Temperaturen</div>
+        <table id="temperature-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Temperatur</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- JS füllt hier die Zeilen ein -->
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+
+
+<!-- JavaScript -->
+<script src="{{ url_for('static', path='js/app.js') }}" defer></script>
+
+</body>
+</html>

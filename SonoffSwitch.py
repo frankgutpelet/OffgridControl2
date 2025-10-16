@@ -9,12 +9,13 @@ class SonoffSwitch:
         OFFLINE = 3
         ERROR = 4
 
-    channel = "POWER3" # POWER2
+    channel = "POWER2" # POWER2
     switchDNS = "192.168.178.25"
 
 
 
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
         pass
 
     def getSwitchState(self):
@@ -33,6 +34,17 @@ class SonoffSwitch:
             return SonoffSwitch.SwitchState.ON
         else:
             return SonoffSwitch.SwitchState.ERROR
+
+    def getSwitchStateAsString(self):
+        state = self.getSwitchState()
+        if self.SwitchState.OFF == state:
+            return "MAINS"
+        elif self.SwitchState.ON == state:
+            return "SOLAR"
+        elif self.SwitchState.OFFLINE == state:
+            return "OFFLINE"
+        else:
+            return "ERROR"
 
     def switch(self, state : SwitchState):
         response = None

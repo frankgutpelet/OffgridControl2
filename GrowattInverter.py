@@ -39,10 +39,8 @@ class SPF6000Inverter(IInverter):
 
     def read_32bit(self, addr):
         regs = self.read_register(addr, count=2)
-        if len(regs) < 4:
+        if not regs or len(regs) < 2:
             return 0
-        if regs is None:
-            return None
         return self.client.convert_from_registers(
             regs,
             data_type=self.client.DATATYPE.UINT32,
@@ -63,9 +61,7 @@ class SPF6000Inverter(IInverter):
                 BatteryVoltage=0,
                 BatteryCurrent=0,
                 BatteryPower=0,
-                InverterInputVoltage=0,
-                InverterInputCurrent=0,
-                InverterInputPower=0,
+                InverterOutputVoltage=0,
                 InverterOutputPower=0
             )
         if not self.client.connect():
@@ -74,10 +70,10 @@ class SPF6000Inverter(IInverter):
         try:
             # Solar Strings
             v1 = self.read_register(1)[0] / 10
-            c1 = self.read_register(3)[0] / 10
+            c1 = self.read_register(7)[0] / 10
             v2 = self.read_register(2)[0] / 10
-            c2 = self.read_register(4)[0] / 10
-            pv_total_power = self.read_32bit(5)
+            c2 = self.read_register(8)[0] / 10
+            pv_total_power = (v1 * c1) + (v2 * c2)
 
             # Aufteilen der Gesamtleistung proportional nach Stromstärken
             total_curr = c1 + c2
@@ -88,18 +84,27 @@ class SPF6000Inverter(IInverter):
                 p1, p2 = 0, 0
 
             # Battery
-            soc = self.read_register(15)[0]
-            batt_v = self.read_register(16)[0] / 10
-            batt_c = self.read_register(17)[0] / 10
-            batt_power = int(batt_v * batt_c)
+            soc = self.read_register(18)[0]
+            batt_v = self.read_register(17)[0] / 100
+            batt_power = -self.read_32bit(73) / 10
+            if 0 != batt_v:
+                batt_c = batt_power / batt_v
+            else:
+                batt_c = 0
+
+            # case batt charging
+            if 0 == batt_power:
+                batt_c = self.read_register(90)[0] /10
+                batt_power = batt_c * batt_v
+
+
 
             # Inverter AC side
-            inv_v = self.read_register(7)[0] / 10
-            inv_c = self.read_register(8)[0] / 10
-            inv_in_power = self.read_32bit(9)
-            inv_out_power = self.read_32bit(11)  # Adresse anpassen falls anders
+            inv_v = self.read_register(22)[0] / 10
+            inv_load_percent = self.read_register(27)[0] / 10
+            inv_power = 60 * inv_load_percent
 
-            return IInverter.InverterValues(
+            values =  IInverter.InverterValues(
                 VoltageSolar1=v1,
                 CurrentSolar1=c1,
                 PowerSolar1=p1,
@@ -108,12 +113,21 @@ class SPF6000Inverter(IInverter):
                 PowerSolar2=p2,
                 SOC=soc,
                 BatteryVoltage=batt_v,
-                BatteryCurrent=batt_c,
-                BatteryPower=batt_power,
-                InverterInputVoltage=inv_v,
-                InverterInputCurrent=inv_c,
-                InverterInputPower=inv_in_power,
-                InverterOutputPower=inv_out_power,
+                BatteryCurrent=round(batt_c,1),
+                BatteryPower=int(batt_power),
+                InverterOutputVoltage=inv_v,
+                InverterOutputPower=int(inv_power),
             )
-        finally:
-            self.client.close()
+            self.logger.Debug("Read Inverter Data: " + values.toString())
+            return values
+
+        except:
+            self.logger.Error("Exception while reading inverter values: " + traceback.format_exc())
+
+    def setPowerSave(self, on : bool):
+        if not on:
+            result = self.client.write_register(address=0, value=0x0000)
+            print("set standby disable")
+        else:
+            print("set standby enable")
+            result = self.client.write_register(address=0, value=0x0101)

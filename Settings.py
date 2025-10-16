@@ -57,11 +57,12 @@ class LoggingSettings:
         return f"LoggingSettings(loglevel='{self.loglevel}', file='{self.file}')"
 
 class Settings:
-    def __init__(self, battery: BatterySettings, inverter : InverterSettings, logging: LoggingSettings, apps: List[App]):
+    def __init__(self, battery: BatterySettings, inverter : InverterSettings, logging: LoggingSettings, file, apps: List[App]):
         self.battery = battery
         self.inverter = inverter
         self.logging = logging
         self.apps = apps
+        self.xmlFile = file
 
     def getAppByName(self, name : str):
         for app in self.apps:
@@ -114,7 +115,7 @@ class Settings:
                 timers=timers
             ))
 
-        return Settings(battery=battery, inverter=inverter, logging=logging, apps=apps)
+        return Settings(battery=battery, inverter=inverter, logging=logging, apps=apps, file=xml_file)
 
     def __repr__(self):
         return (f"Settings(battery={self.battery}, "
@@ -122,9 +123,11 @@ class Settings:
                 f"logging={self.logging}, "
                 f"apps={self.apps})")
 
-    def to_xml_file(self, xml_file: str):
+    def to_xml_file(self, xml_file = ""):
         root = ET.Element("Settings")
 
+        if '' == xml_file:
+            xml_file = self.xmlFile
         # Battery
         battery_elem = ET.SubElement(root, "BatterySettings")
         battery_elem.set("minimumSOC", str(self.battery.minimumSOC))

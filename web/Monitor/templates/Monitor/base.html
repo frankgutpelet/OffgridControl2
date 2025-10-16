@@ -257,14 +257,15 @@
     <div class="table-container">
         <table>
             <tr><th>Batteriespannung</th><td><strong id="batV">{{ batV }} V</strong></td></tr>
-            <tr><th>Panelstrom</th><td><strong id="batI">{{ batI }} A</strong></td></tr>
-            <tr><th>Ladestrom</th><td><strong id="sumI">{{ sumI }} A</strong></td></tr>
+            <tr><th>Panelstrom</th><td><strong id="panI">{{ panI }} A</strong></td></tr>
+            <tr><th>Ladestrom</th><td><strong id="batI">{{ batI }} A</strong></td></tr>
             <tr><th>Panelspannung</th><td><strong id="solV">{{ solV }} V</strong></td></tr>
             <tr><th>Versorgung</th><td><strong id="solarSupply">{{ solarSupply }}</strong></td></tr>
-            <tr><th>Ladezustand</th><td><strong id="chargingState">{{ chargingState }}</strong></td></tr>
             <tr><th>Solarleistung</th><td><strong id="solarPower">{{ solarPower }} W</strong></td></tr>
             <tr><th>Verbrauch</th><td><strong id="sumP">{{ sumP }} W</strong></td></tr>
+            <tr><th>Ladeleistung</th><td><strong id="chP">{{ chP }} W</strong></td></tr>
             <tr><th>SOC</th><td><strong id="soc">{{ soc }} %</strong></td></tr>
+            <tr><th>Speicher</th><td><strong id="kwh">{{ kwh }} %</strong></td></tr>
             <tr><th>Energie heute</th><td><strong id="today">{{ today }} KWh</strong></td></tr>
             <tr><th>Energie gestern</th><td><strong id="yesterday">{{ yesterday }} KWh</strong></td></tr>
         </table>
@@ -289,9 +290,9 @@
 </div>
 
 <script>
-    function updateGraphics(sumI, solarPower) {
-        const sumIElement = document.getElementById("sumI");
-        sumIElement.style.color = sumI < 0 ? "red" : "green";
+    function updateGraphics(batI, solarPower) {
+        const batIElement = document.getElementById("batI");
+        batIElement.style.color = batI < 0 ? "red" : "green";
 
         const maxPower = 3000;
         const pointerElement = document.getElementById("tachometer-pointer");
@@ -299,7 +300,7 @@
         pointerElement.style.transform = `rotate(${angle - 90}deg)`;
 
         const arrow = document.getElementById("arrow");
-        if (sumI > 0){
+        if (batI > 0){
             arrow.innerHTML = "&#8593;";
             arrow.style = "color:green";
         }
@@ -317,13 +318,14 @@
                 console.log(`UpdateData ${JSON.stringify(data)}`);
                 document.getElementById('batV').textContent = data.batV + ' V';
                 document.getElementById('batI').textContent = data.batI + ' A';
-                document.getElementById('sumI').textContent = data.sumI + ' A';
-                document.getElementById('sumP').textContent = data.sumP + ' W';
+                document.getElementById('panI').textContent = data.panI + ' A';
+                document.getElementById('sumP').textContent = parseFloat(data.consP).toFixed(0) + ' W'
+                document.getElementById('chP').textContent = data.sumP < 0 ? (-parseFloat(data.sumP).toFixed(0)  + ' W') : '0 W';
                 document.getElementById('solV').textContent = data.solV + ' V';
                 document.getElementById('solarSupply').textContent = data.solarSupply;
-                document.getElementById('chargingState').textContent = data.chargingState;
                 document.getElementById('solarPower').textContent = data.solarPower + ' W';
                 document.getElementById('soc').textContent = data.soc + ' %';
+                document.getElementById('kwh').textContent = (9.6 * data.soc / 100).toFixed(1) + ' kWh'
                 document.getElementById('today').textContent = data.today + ' KWh';
                 document.getElementById('yesterday').textContent = data.yesterday + ' KWh';
                 document.getElementById('device-table').innerHTML = data.deviceTable;
@@ -335,7 +337,7 @@
                 document.getElementById('soc-display').textContent = soc + '%';
 
                 document.getElementById('tachometer-label').textContent = data.solarPower + ' W';
-                updateGraphics(parseFloat(data.sumI), parseFloat(data.solarPower));
+                updateGraphics(parseFloat(data.batI), parseFloat(data.solarPower));
             })
             .catch(error => console.error('Fehler beim Abrufen der Daten:', error));
     }

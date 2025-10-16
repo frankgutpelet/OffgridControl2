@@ -11,6 +11,7 @@ import time, json
 import threading
 import traceback
 import os
+from webApi import ApiServer
 
 
 supplySwitch : SonoffSwitch
@@ -21,10 +22,11 @@ frontEnd : FrontendInterface
 inverterValues : IInverter.InverterValues
 logger : Logging
 opened_time_Settings : float
+settings : Settings
 
 
 def main():
-    global supplySwitch, consumerIndex, consumers, inverter, frontEnd, frontEndThread, inverterValues, logger, opened_time_Settings
+    global supplySwitch, consumerIndex, consumers, inverter, frontEnd, frontEndThread, inverterValues, logger, opened_time_Settings, settings
     consumerIndex = 0
     logger = Logging()
     logger.setLogLevel("DEBUG")
@@ -32,12 +34,15 @@ def main():
     settings = Settings.from_xml_file("Settings.xml")
     consumers = settings.apps
     inverter = SPF6000Inverter(logger)
-    supplySwitch = SonoffSwitch()
+    supplySwitch = SonoffSwitch(logger)
     frontEnd = FrontendInterface(logger)
 
     consumers = list()
     for app in settings.apps:
         consumers.append(Consumer(app, logger))
+
+    api = ApiServer(logger, supplySwitch, consumers, inverter, settings)
+    api.start()
 
     inverterValues = inverter.getValues()
     frontEndThread = threading.Thread(target=frontEndThreadFunc, daemon=True)
@@ -46,13 +51,18 @@ def main():
 
 
     while(True):
-        inverterValues = inverter.getValues()
-        if handleOvercurrent(settings.battery, inverterValues.BatteryCurrent):
-            continue
-        if handleMinimalSOC(settings.battery, inverterValues.SOC):
-            continue
-        handleNextConsumer(settings.battery, settings.inverter)
-        attentiveTimeout(10, settings.battery)
+        try:
+            inverterValues = inverter.getValues()
+            if handleOvercurrent(settings.battery, inverterValues.BatteryCurrent):
+                continue
+            if handleMinimalSOC(settings.battery, inverterValues.SOC):
+                continue
+            if (SonoffSwitch.SwitchState.OFF == supplySwitch.getSwitchState()):
+                logger.Debug("SwitchState is OFF")
+            handleNextConsumer(settings.battery, settings.inverter)
+            attentiveTimeout(10, settings.battery)
+        except:
+            logger.Error("Exception in maintread: " + traceback.format_exc())
 
 def frontEndThreadFunc():
     global logger
@@ -68,7 +78,7 @@ def checkSettings():
     global opened_time_Settings, consumers
     if opened_time_Settings != os.path.getmtime("Settings.xml"):
         opened_time_Settings = os.path.getmtime("Settings.xml")
-        logger.Debug("Settings wurden geändert. Relead")
+        logger.Debug("Settings wurden geändert. Reload")
         settings = None
         settings = Settings.from_xml_file("Settings.xml")
 
@@ -79,41 +89,71 @@ def checkSettings():
 
 
 def handleOvercurrent(batterySettings : BatterySettings, current : float):
-    global supplySwitch, state
+    global state
     if batterySettings.maxCurrentA < (-current):
-        supplySwitch.switch(SonoffSwitch.SwitchState.OFF)
+        switchSolarSupply(False)
         switchOffConsumers()
         timeout(15)
         return True
     return False
 
 def handleMinimalSOC(batterySettings : BatterySettings, soc : int):
-    global state
+    global state, logger
+    logger.Debug("Check SOC")
     if batterySettings.minimumSOC > soc:
-        supplySwitch.switch(SonoffSwitch.SwitchState.OFF)
+        logger.Debug("SOC to low: " + str(soc) + "% < " + str(batterySettings.minimumSOC) + "%" )
+        switchSolarSupply(False)
         switchOffConsumers()
-        timeout(10)
+        timeout(5)
         return True
-    pass
+    elif (SonoffSwitch.SwitchState.ON != supplySwitch.getSwitchState()
+            and (settings.battery.minimumSOC + 3) > inverterValues.SOC):
+                logger.Debug("Switch is OFF - treshold")
+    else:
+        switchSolarSupply(True)
+
 
 def handleNextConsumer(batterySettings : BatterySettings, inverterSettings : InverterSettings):
-    global consumers, consumerIndex, inverter, inverterValues
+    global consumers, consumerIndex, inverter, inverterValues, logger
     inverterValues = inverter.getValues()
     consumer = consumers[consumerIndex]
     # Wenn der Inverter und die Batterie noch nicht an der Obergrenze ist wird noch ein zusätzlicher Verbraucher
     # eingeschaltet, ansonsten wird einer ausgeschaltet
     #todo Dies muss noch validiert werden, nicht dass hier ein Verbraucher die ganze Zeit ein- und wieder ausgeschaltet wird
+    if ((batterySettings.maxCurrentA - 30) > (-inverterValues.BatteryCurrent)):
+        logger.Debug("Condition1 OK: " + str(batterySettings.maxCurrentA - 30) + ">" + str(-inverterValues.BatteryCurrent))
+    if ((batterySettings.maxCurrentA - 30) > (-inverterValues.BatteryCurrent)):
+        logger.Debug("Condition2 OK: " + str(inverterSettings.maxPower - 1000) + ">" + str(inverterValues.InverterOutputPower))
     if(     ((batterySettings.maxCurrentA - 30) > (-inverterValues.BatteryCurrent))
         and ((inverterSettings.maxPower - 1000) > inverterValues.InverterOutputPower)):
         consumer.approve(inverterValues.SOC)
     else:
-        consumer.prohibit()
+        consumer.prohibit(True)
 
     consumer.push()
 
     consumerIndex += 1
     if consumerIndex >= len(consumers):
         consumerIndex = 0
+
+def switchSolarSupply(on : bool):
+    global supplySwitch, inverter, logger, settings
+    if on:
+        if SonoffSwitch.SwitchState.ON ==  supplySwitch.getSwitchState():
+            return
+        logger.Debug("Wake up Inverter from Standby mode")
+        inverter.setPowerSave(False)
+        attentiveTimeout(30, settings.battery)
+        logger.Debug("Switch on Solar supply")
+        supplySwitch.switch(SonoffSwitch.SwitchState.ON)
+    else:
+        if SonoffSwitch.SwitchState.OFF == supplySwitch.getSwitchState():
+            return
+        logger.Debug("Switch off inverter")
+        supplySwitch.switch(SonoffSwitch.SwitchState.OFF)
+        attentiveTimeout(30, settings.battery)
+        logger.Debug("Set Inverter to standby")
+        inverter.setPowerSave(True)
 
 def switchOffConsumers():
     global consumers, consumerIndex
@@ -132,7 +172,7 @@ def timeout(minutes : int):
         time.sleep(1)
 
 def attentiveTimeout(seconds : int, batterySettings : BatterySettings):
-    global inverter, inverterValues
+    global inverter, inverterValues, logger
     for i in range(0, seconds):
         inverterValues = inverter.getValues()
         checkSettings()
@@ -141,12 +181,22 @@ def attentiveTimeout(seconds : int, batterySettings : BatterySettings):
         time.sleep(1)
 
 def sendDataToFrontend():
-    global frontEnd, inverterValues, logger
+    global frontEnd, inverterValues, logger, supplySwitch
     frontendJson = {
         'data' : dict()
     }
     frontendJson['data']['inverter'] = inverterValues.toJson()
     frontendJson['data']['devices'] = list()
+    state = supplySwitch.getSwitchState()
+    if supplySwitch.SwitchState.OFF == state:
+        frontendJson['data']['switch'] = "MAINS"
+    elif supplySwitch.SwitchState.ON == state:
+        frontendJson['data']['switch'] = "SOLAR"
+    elif supplySwitch.SwitchState.OFFLINE == state:
+        frontendJson['data']['switch'] = "OFFLINE"
+    else:
+        frontendJson['data']['switch'] = "ERROR"
+
     for consumer in consumers:
         frontendJson['data']['devices'].append(consumer.toJson())
 

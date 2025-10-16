@@ -21,9 +21,7 @@ class IInverter(ABC):
         BatteryPower: int
 
         # Inverter Values
-        InverterInputVoltage: float
-        InverterInputCurrent: float
-        InverterInputPower: int
+        InverterOutputVoltage: float
         InverterOutputPower: int
 
         def __post_init__(self):
@@ -50,4 +48,8 @@ class IInverter(ABC):
 
     @abstractmethod
     def getValues(self) -> "IInverter.InverterValues":
+        raise NotImplementedError
+
+    @abstractmethod
+    def setPowerSave(self, on : bool):
         raise NotImplementedError

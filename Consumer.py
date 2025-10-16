@@ -63,10 +63,13 @@ class Consumer():
         oldSoc = self.soc
 
         self.prohibitCounter = 0
-        if not 'Auto' == self.mode:
+        if not 'auto' == self.mode.lower():
             return (self.isOn != oldState)
+        self.logger.Debug("mode = Auto")
         if self.timeswitch:
             self.isOn, self.soc = self.timeswitch.isOn(datetime.now().time())
+            if self.isOn:
+                self.logger.Debug("Timeswitch on")
         else:
             self.isOn = True
 
@@ -75,6 +78,7 @@ class Consumer():
 
         #ausschalten wenn min soc unterschritten
         if self.soc > soc:
+            self.logger.Debug("SOC is too low")
             self.isOn = False
 
         if self.isOn and (oldState != self.isOn):
