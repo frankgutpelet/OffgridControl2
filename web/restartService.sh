@@ -1,3 +1,0 @@
-./stopService.sh
-./startService.sh
-
