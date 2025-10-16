@@ -16,7 +16,7 @@
 
 <div class="container">
 
-    <!-- obere Anzeige -->
+    <!-- Obere Anzeige -->
     <div class="top-symbols">
         <div class="battery-container">
             <div class="battery-icon">
@@ -36,13 +36,13 @@
         </div>
     </div>
 
-    <!-- Tabellenbereich -->
+    <!-- Inverter-Tabelle -->
     <div class="table-container">
         <table>
             <tr><th>Batteriespannung</th><td><strong id="batV">-- V</strong></td></tr>
             <tr><th>Batteriestrom</th><td><strong id="batI">-- A</strong></td></tr>
-            <tr><th>Panelstrom</th><td><strong id="pan1I">-- A</strong></td></tr>
-            <tr><th>Panelstrom2</th><td><strong id="pan2I">-- A</strong></td></tr>
+            <tr><th>Panelstrom Ost</th><td><strong id="pan1I">-- A</strong></td></tr>
+            <tr><th>Panelstrom West</th><td><strong id="pan2I">-- A</strong></td></tr>
             <tr><th>Panelspannung Ost</th><td><strong id="sol1V">-- V</strong></td></tr>
             <tr><th>Panelspannung West</th><td><strong id="sol2V">-- V</strong></td></tr>
             <tr><th>Solarleistung Ost</th><td><strong id="solar1Power">-- W</strong></td></tr>
@@ -53,7 +53,7 @@
         </table>
     </div>
 
-    <!-- Gerätestatus -->
+    <!-- Verbraucher-Tabelle -->
     <div class="table-container">
         <div class="table-title">Verbraucher</div>
         <table>
@@ -67,9 +67,8 @@
             <tbody id="device-table"></tbody>
         </table>
     </div>
-    <div class="table-container">
 
-      <!-- Temperaturen -->
+    <!-- Temperatur-Tabelle -->
     <div class="table-container">
         <div class="table-title">Temperaturen</div>
         <table id="temperature-table">
@@ -84,17 +83,43 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Bild mit Lightbox -->
     <div class="image-container">
-        <img src="static/resource/inverter_plot.png" alt="Solarmodul" id="panel-image">
+        <img src="/static/resource/inverter_plot.png" alt="Solarmodul" id="panel-image" class="clickable-image">
     </div>
-            
+
+    <!-- Overlay für Vergrößerung -->
+    <div id="image-overlay" class="overlay">
+        <span id="overlay-close">&times;</span>
+        <img class="overlay-content" id="overlay-image">
+    </div>
 
 </div>
 
-
-
 <!-- JavaScript -->
 <script src="{{ url_for('static', path='js/app.js') }}" defer></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const overlay = document.getElementById("image-overlay");
+    const overlayImage = document.getElementById("overlay-image");
+    const closeBtn = document.getElementById("overlay-close");
+
+    const img = document.getElementById("panel-image");
+    img.addEventListener("click", () => {
+        overlay.style.display = "flex";
+        overlayImage.src = img.src;
+    });
+
+    closeBtn.addEventListener("click", () => {
+        overlay.style.display = "none";
+    });
+
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) overlay.style.display = "none";
+    });
+});
+</script>
 
 </body>
 </html>

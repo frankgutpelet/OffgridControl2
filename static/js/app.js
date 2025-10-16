@@ -1,5 +1,26 @@
 document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
+    const overlay = document.getElementById("image-overlay");
+    const overlayImage = document.getElementById("overlay-image");
+    const closeBtn = document.getElementById("overlay-close");
 
+    // Bild anklicken
+    const img = document.getElementById("panel-image");
+    img.addEventListener("click", () => {
+        overlay.style.display = "flex";
+        overlayImage.src = img.src; // Bild im Overlay anzeigen
+    });
+
+    // Overlay schließen
+    closeBtn.addEventListener("click", () => {
+        overlay.style.display = "none";
+    });
+
+    // Overlay schließen, wenn man außerhalb des Bildes klickt
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) overlay.style.display = "none";
+    });
+});
     function updateGraphics(batI, solarPower) {
         //console.log(`Update Graphics: ${batI}, ${solarPower}`)
         const batIElement = document.getElementById("batI");
