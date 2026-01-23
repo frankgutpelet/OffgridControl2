@@ -30,16 +30,16 @@ for dateiname in dateiliste:
             dateiliste_filtered.append(dateiname)
 
 if not dateiliste_filtered:
-    print(f"⚠️ Keine Dateien der letzten 2 Tage gefunden in: {os.path.abspath(ordner)}")
+    print(f"Keine Dateien der letzten 2 Tage gefunden in: {os.path.abspath(ordner)}")
     exit()
 else:
-    print(f"📂 {len(dateiliste_filtered)} Dateien der letzten 2 Tage gefunden, lese ein...")
+    print(f"{len(dateiliste_filtered)} Dateien der letzten 2 Tage gefunden, lese ein...")
 
 jetzt = datetime.now()
 fehler_zeilen = 0
 
 for dateiname in dateiliste_filtered:
-    print(f"→ Lese {os.path.basename(dateiname)}")
+    print(f"Lese {os.path.basename(dateiname)}")
 
     date_match = re.search(r"(\d{4}-\d{2}-\d{2})", dateiname)
     if date_match:
@@ -82,10 +82,10 @@ for dateiname in dateiliste_filtered:
                 fehler_zeilen += 1
                 continue
 
-print(f"ℹ️ {fehler_zeilen} fehlerhafte oder unvollständige Zeilen übersprungen.")
+print(f"{fehler_zeilen} fehlerhafte oder unvollständige Zeilen übersprungen.")
 
 if not zeiten:
-    print("⚠️ Keine gültigen Datensätze gefunden.")
+    print("Keine gültigen Datensätze gefunden.")
     exit()
 
 # === In DataFrame umwandeln ===

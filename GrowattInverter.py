@@ -1,7 +1,12 @@
+import logging
+
+import requests
+
 from IInverter import IInverter
 from pymodbus.client import ModbusSerialClient
 from MyLogging import Logging
 import traceback
+import json
 
 class SPF6000Inverter(IInverter):
     """
@@ -47,6 +52,7 @@ class SPF6000Inverter(IInverter):
         )
 
     def getValues(self) -> IInverter.InverterValues:
+        #self.logger.Debug("".join(traceback.format_stack()))
         if 0 != self.inverterOfflineCounter:
             self.logger.Debug("Inverter timeout")
             self.inverterOfflineCounter -= 1
@@ -62,7 +68,8 @@ class SPF6000Inverter(IInverter):
                 BatteryCurrent=0,
                 BatteryPower=0,
                 InverterOutputVoltage=0,
-                InverterOutputPower=0
+                InverterOutputPower=0,
+                MainsPower=0,
             )
         if not self.client.connect():
             raise ConnectionError("Inverter connection failed")
@@ -103,6 +110,22 @@ class SPF6000Inverter(IInverter):
             inv_v = self.read_register(22)[0] / 10
             inv_load_percent = self.read_register(27)[0] / 10
             inv_power = 60 * inv_load_percent
+            MainsPower = 0
+            try:
+                response = requests.get("http://wattwaechter/cm?cmnd=Status%208")
+                data = response.json()
+                #self.logger.Debug(f"response from Wattwaechter: {response.status_code} , Data: {json.dumps(data)}")
+                if 200 != response.status_code:
+                    self.logger.Error("No Power Information from Wattwaechter (Smartmeater)")
+                    MainsPower = -1
+                else:
+                    MainsPower = data.get("StatusSNS", {}).get("MT631", {}).get("P", None)
+            except Exception as e:
+                self.logger.Error(e)
+            if not MainsPower:
+                MainsPower = -1
+
+
 
             values =  IInverter.InverterValues(
                 VoltageSolar1=v1,
@@ -117,8 +140,9 @@ class SPF6000Inverter(IInverter):
                 BatteryPower=int(batt_power),
                 InverterOutputVoltage=inv_v,
                 InverterOutputPower=int(inv_power),
+                MainsPower=int(MainsPower)
             )
-            self.logger.Debug("Read Inverter Data: " + values.toString())
+            self.logger.Info("Read Inverter Data: " + values.toString())
             return values
 
         except:

@@ -23,6 +23,7 @@ class IInverter(ABC):
         # Inverter Values
         InverterOutputVoltage: float
         InverterOutputPower: int
+        MainsPower : int
 
         def __post_init__(self):
             """Konvertiert Strings automatisch in float/int, falls nötig."""

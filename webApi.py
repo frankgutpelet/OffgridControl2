@@ -26,7 +26,7 @@ class ApiServer:
     consumerList : list[Consumer]
     settings : Settings
 
-    def __init__(self, logger, sonoff, consumers, inverter, settings, host="0.0.0.0", port=8001):
+    def __init__(self, logger, sonoff, consumers, inverter, settings, host="0.0.0.0", port=8000):
         """
         backend: Instanz deines bestehenden Backends
         host, port: Serverkonfiguration
@@ -56,7 +56,7 @@ class ApiServer:
             return {"values": self.inverter.getValues().toJson()}
 
         @self.app.get("/api/get_consumers", summary="Liefert aktuelle Consumers und deren Status")
-        def get_werte():
+        def get_consumers():
             try:
                 values = {'devices' : []}
                 for consumer in self.consumerList:
@@ -65,21 +65,28 @@ class ApiServer:
             except:
                 self.logger.Error(traceback.format_exc())
 
-        @self.app.get("/api/get_supplyState", summary="Liefert aktuelle Consumers und deren Status")
-        def get_werte():
+        @self.app.get("/api/get_supplyState", summary="Liefert aktuelle Supply status")
+        def get_supplyState():
+            values = self.inverter.getValues()
+            if SonoffSwitch.SwitchState.ON == self.sonoff.getSwitchState() and 50 > (values.PowerSolar1 + values.PowerSolar2):
+                return {"supplyState": "BATTERY"}
             return {"supplyState": self.sonoff.getSwitchStateAsString()}
 
-        @self.app.post("/api/consumer/", summary="Fügt neuen Wert hinzu")
+        @self.app.post("/api/consumer/", summary="ändert den modus eines consumers")
         def set_consumerState(body : ConsumerBody):
-            if not body.status in ["ON", "AUTO", "OFF"]:
-                return {"status": "Error - wrong status"}
-            self.logger.Debug(f"Set consumer {body.name} to {body.mode}")
-            for app in self.settings.apps:
-                if body.name == app.name:
-                    app.mode = body.mode
-                    self.settings.to_xml_file()
-                    return {"status": "ok"}
-            return {"status": "error"}
+            data = json.loads(body.model_dump_json())
+            try:
+                if not data['mode'] in ["ON", "AUTO", "OFF"]:
+                    return {"status": "Error - wrong status"}
+                self.logger.Debug(f"Set consumer {data['name']} to {data['mode']}")
+                for app in self.settings.apps:
+                    if data['name'] == app.name:
+                        app.mode = data['mode']
+                        self.settings.to_xml_file()
+                        return {"status": "ok"}
+                return {"status": "error"}
+            except:
+                return {"status": "Error", "message": traceback.format_exc() + f"\n Parameter: {json.dumps(data)}"}
 
         # Route für das Frontend
         @self.app.get("/", summary="Webseite anzeigen")
@@ -95,6 +102,7 @@ class ApiServer:
                 "solV": 30,
                 "solarSupply": "ON",
                 "sumP": 500,
+                "sumPM": 500,
                 "chP": 100,
                 "kwh": 50,
                 "today": 5.2,

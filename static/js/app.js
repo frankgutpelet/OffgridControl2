@@ -58,20 +58,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("failed to fetch data for get_supplyState: " + res.statusText)
                 return
             }
+
             const json = await res.json();
             const json2 = await supply.json()
             const data = json.values;
-            //console.log(JSON.stringify(data))
+            console.log(data.MainsPower.toFixed(0) + ' W')
             //console.log(JSON.stringify(json2))
 
             // 🔋 Inverterdaten anzeigen
             document.getElementById('batV').textContent = data.BatteryVoltage.toFixed(1) + ' V';
             document.getElementById('batI').textContent = data.BatteryCurrent.toFixed(1) + ' A';
+            document.getElementById('batP').textContent = (parseInt(data.BatteryVoltage) * parseInt(data.BatteryCurrent)).toFixed(0) + ' W';
             document.getElementById('pan1I').textContent = data.CurrentSolar1.toFixed(1) + ' A';
             document.getElementById('pan2I').textContent = data.CurrentSolar2.toFixed(1) + ' A';
             document.getElementById('sol1V').textContent = data.VoltageSolar1.toFixed(1) + ' V';
             document.getElementById('sol2V').textContent = data.VoltageSolar2.toFixed(1) + ' V';
             document.getElementById('sumP').textContent = data.InverterOutputPower.toFixed(0) + ' W';
+            document.getElementById('sumPm').textContent = data.MainsPower.toFixed(0) + ' W';
             document.getElementById('solar1Power').textContent = data.PowerSolar1.toFixed(0) + ' W';
             document.getElementById('solar2Power').textContent = data.PowerSolar2.toFixed(0) + ' W';
             document.getElementById('soc').textContent = data.SOC.toFixed(0) + ' %';
@@ -101,9 +104,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const json = await res.json();
             let html = '';
             json.devices.forEach(dev => {
+                state = "OFF"
+                if (dev.isOn){
+                    state = "ON"
+                }
                 html += `<tr>
                             <td>${dev.name}</td>
                             <td>${dev.mode}</td>
+                            <td>${state}</td>
                             <td>
                                 <button class="device-button" data-device="${dev.name}" data-mode="ON">ON</button>
                                 <button class="device-button" data-device="${dev.name}" data-mode="OFF">OFF</button>
@@ -120,6 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Klick-Handler für Geräte
     document.getElementById('device-table').addEventListener('click', e => {
         const target = e.target;
+        console.log("Button gedrückt")
         if (target.classList.contains('device-button')) {
             const mode = target.dataset.mode;
             const name = target.dataset.device;

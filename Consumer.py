@@ -23,7 +23,7 @@ class TimeSwitch():
 
 class Consumer():
     prio : int
-    mode : str # Settings.E_MODE
+    mode : str
     soc : int
     name : str
     __dns : str
@@ -64,6 +64,7 @@ class Consumer():
 
         self.prohibitCounter = 0
         if not 'auto' == self.mode.lower():
+            self.isOn = True
             return (self.isOn != oldState)
         self.logger.Debug("mode = Auto")
         if self.timeswitch:
@@ -93,9 +94,11 @@ class Consumer():
         self.prohibitCounter +=1
         ret = False
         if force or (self.maxSoftProhibits < self.prohibitCounter):
-            if 'Auto' == self.mode:
+            if self.mode.lower() in ['auto', 'off']:
                 ret = self.isOn
                 self.isOn = False
+                if ret:
+                    self.logger.Debug("Switched off " + self.name)
         return ret
 
     def push(self):
