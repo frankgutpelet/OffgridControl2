@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rooms>
+    <room name="Wohnzimmer" channel="channel2" url="">
+        <slot time="17:10" temp="20.0" days="1-5" />
+        <slot time="17:15" temp="20.0" days="1-5" />
+    </room>
+
+<room name="Alex" channel="channel4" url="">
+        <slot time="17:17" temp="20.0" days="1-7" /></room>
+</rooms>

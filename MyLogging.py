@@ -9,7 +9,11 @@ class Logging:
     LOGGLEVEL_INFO = 2
     LOGGLEVEL_DEBUG = 3
 
-    def __init__(self):
+    def __init__(self, logfile = None):
+        if not logfile:
+            self.logfile = "log/OffgridControl_"
+        else:
+            self.logfile = logfile
         self.__loglevel = 0
         self.__logToCVS = False
         self.__lock_logBuffer = threading.Lock()
@@ -22,7 +26,7 @@ class Logging:
             if (len(self.logBuffer) >= 1):
                 self.__lock_logBuffer.acquire()
                 try:
-                    logfile = open("log/OffgridControl_" + datetime.datetime.today().strftime("%Y-%m-%d") + ".log", "a")
+                    logfile = open(self.logfile + datetime.datetime.today().strftime("%Y-%m-%d") + ".log", "a")
                     for entry in self.logBuffer:
                         logfile.write(entry)
                     logfile.close()
@@ -64,5 +68,5 @@ class Logging:
             self.__loglevel = Logging.LOGGLEVEL_NONE
         else:
             self.__loglevel = Logging.LOGGLEVEL_ERROR
-            self.Error("Loglevel wrong: " + loglevel)
+            self.Error("Loglevel wrong: " + str(loglevel))
             loglevel = "DEBUG"

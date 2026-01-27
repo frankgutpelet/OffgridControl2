@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperatursteuerung</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+</head>
+<body>
+
+<header>
+    <h1>Temperatursteuerung</h1>
+</header>
+
+<div class="container">
+
+    <!-- Temperatur-Konfiguration -->
+    <div class="table-container">
+        <table id="room-table">
+            <thead>
+                <tr>
+                    <th>Raum</th>
+                    <th>Aktuell</th>
+                    <th>Zeit</th>
+                    <th>Temperatur</th>
+                    <th>Tage</th>
+                    <th>Aktion</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- JS füllt hier die Zeilen ein -->
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+
+<!-- JS für dynamisches Rendern und Speichern -->
+<script src="{{ url_for('static', path='js/rooms.js') }}" defer></script>
+
+</body>
+</html>
