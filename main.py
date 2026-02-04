@@ -12,6 +12,7 @@ import threading
 import traceback
 import os
 from webApi import ApiServer
+from Heizungssteuerung import HeizungsPage
 
 
 supplySwitch : SonoffSwitch
@@ -23,10 +24,11 @@ inverterValues : IInverter.InverterValues
 logger : Logging
 opened_time_Settings : float
 settings : Settings
+heizung : HeizungsPage
 
 
 def main():
-    global supplySwitch, consumerIndex, consumers, inverter, frontEnd, frontEndThread, inverterValues, logger, opened_time_Settings, settings
+    global supplySwitch, consumerIndex, consumers, inverter, frontEnd, frontEndThread, inverterValues, logger, opened_time_Settings, settings, heizung
     consumerIndex = 0
     logger = Logging()
     logger.setLogLevel("DEBUG")
@@ -43,6 +45,7 @@ def main():
         consumers.append(Consumer(app, logger))
 
     api = ApiServer(logger, supplySwitch, consumers, inverter, settings)
+    #heizung = HeizungsPage(logger, server= api)
     api.start()
 
     inverterValues = inverter.getValues()
@@ -53,7 +56,6 @@ def main():
 
     while(True):
         try:
-            logger.Info("Thread")
             inverterValues = inverter.getValues()
             if handleOvercurrent(settings.battery, inverterValues.BatteryCurrent):
                 continue
@@ -61,6 +63,7 @@ def main():
                 continue
             handleNextConsumer(settings.battery, settings.inverter)
             attentiveTimeout(1, settings.battery)
+            heizung = heizung
         except:
             logger.Error("Exception in maintread: " + traceback.format_exc())
 

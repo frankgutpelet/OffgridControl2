@@ -3,6 +3,7 @@ import threading
 import time
 
 
+
 class Logging:
     LOGGLEVEL_NONE = 0
     LOGGLEVEL_ERROR = 1
@@ -52,6 +53,9 @@ class Logging:
             return
         self.__Log("ERROR - " + string)
 
+    def Write(self, string):
+       self.__Log("STD  - " + string)
+
     def __Log(self, string):
         self.__lock_logBuffer.acquire()
         self.logBuffer.append(datetime.datetime.now().strftime("%H:%M:%S") + ": " + string + "\n")
@@ -70,3 +74,5 @@ class Logging:
             self.__loglevel = Logging.LOGGLEVEL_ERROR
             self.Error("Loglevel wrong: " + str(loglevel))
             loglevel = "DEBUG"
+
+

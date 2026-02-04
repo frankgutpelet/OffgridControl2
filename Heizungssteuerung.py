@@ -1,33 +1,26 @@
-import json
-import logging
-import threading
-import time
-import traceback
+from xml.dom import minidom
 
+from fastapi import Query
+import threading
 import uvicorn
-from pydantic import BaseModel
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from MyLogging import Logging
-from typing import Optional
 from TempReader import TempReader
-
-# ---------------------------
-# Pydantic-Modelle
-# ---------------------------
-class TimeSlot(BaseModel):
-    time: str         # Uhrzeit z.B. "06:00"
-    temp: float       # Solltemperatur
-    days: str         # z. B. "Mo", "1-5"
+from Types import *
+from CentralHeatingControl import CentralHeatingControl
 
 
-class ConsumerBody(BaseModel):
-    name: str
-    mode: str
-
+class TimeSlot(BaseModel):  # Von BaseModel erben!
+    id : int
+    time: str  # Im XML war es ein String "06:00"
+    temp: float
+    days: str
+    active : bool
+    heating: bool
 
 class RoomState(BaseModel):
     name: str
@@ -42,34 +35,39 @@ class RoomProfile(BaseModel):
     slots: list[TimeSlot]
     channel: Optional[str] = None
     url: Optional[str] = None
-
-
 # ---------------------------
 # ApiServer
 # ---------------------------
-class ApiServer:
+class HeizungsPage:
 
     logger: Logging
 
-    def __init__(self, logger: Logging, host="0.0.0.0", port=8001):
+    def __init__(self, logger: Logging, host="0.0.0.0", port=8001, server = None):
         self.logger = logger
         self.host = host
         self.port = port
         self.xml_file = Path("rooms.xml")
         self.room_profiles: dict[str, dict] = {}  # { room_name: {"slots": [...], "channel": ..., "url": ...} }
         self.tempReader = TempReader()
-        self.controller = tempControl(self.xml_file, self.logger)
+        self.controller = CentralHeatingControl(self.xml_file, self.logger)
         self.load_xml()
 
-        self.app = FastAPI(
-            title="OffgridControl REST API",
-            description="OffgridControl REST API",
-            version="1.0.0"
-        )
+        if not server:
+            self.app = FastAPI(
+                title="OffgridControl REST API",
+                description="OffgridControl REST API",
+                version="1.0.0"
+            )
+            self.app.mount("/static", StaticFiles(directory="static"), name="static")
+            self.templates = Jinja2Templates(directory="templates")
+            self._thread = None
 
-        self.app.mount("/static", StaticFiles(directory="static"), name="static")
-        self.templates = Jinja2Templates(directory="templates")
-        self._thread = None
+        else:
+            self.app = server.getApp()
+            #self.app.mount("/static", StaticFiles(directory="static"), name="static")
+            self.templates = Jinja2Templates(directory="templates")
+            self._thread = server.getThread()
+
         self._setup_routes()
 
 
@@ -93,9 +91,12 @@ class ApiServer:
             slots = []
             for slot_el in room_el.findall("slot"):
                 slots.append(TimeSlot(
+                    id = slot_el.get("id"),
                     time=slot_el.get("time"),
                     temp=float(slot_el.get("temp")),
-                    days=slot_el.get("days", "1-7")
+                    days=slot_el.get("days", "1-7"),
+                    active=False,
+                    heating=False
                 ))
 
             self.room_profiles[name] = {
@@ -122,12 +123,11 @@ class ApiServer:
                 room_data = values.get(channel)
                 if room_data:
                     return room_data.get("temperature", 0.0)
+            return self.controller.getTemp(roomname)
 
-            # Fallback, wenn kein Channel definiert oder keine Daten da sind
-            return 99.0
 
         # Frontend
-        @self.app.get("/", summary="Webseite anzeigen")
+        @self.app.get("/Heizung", summary="Webseite anzeigen")
         def index(request: Request):
             context = {"request": request}
             return self.templates.TemplateResponse("rooms.html", context)
@@ -138,12 +138,14 @@ class ApiServer:
             result = []
             for room_name, data in self.room_profiles.items():
                 current_temp = getTemperature(room_name)
+                for slot in data["slots"]:
+                    slot.heating, slot.active =  self.controller.isOn(room_name, slot.id)
                 result.append(RoomState(
                     name=room_name,
                     current=current_temp,
                     slots=data["slots"],
                     channel=data.get("channel"),
-                    url=data.get("url")
+                    url=data.get("url"),
                 ))
             return result
 
@@ -171,7 +173,7 @@ class ApiServer:
                         room_el.remove(s)
                     # Neue Slots einfügen
                     for s in profile.slots:
-                        ET.SubElement(room_el, "slot", time=s.time, temp=str(s.temp), days=s.days)
+                        ET.SubElement(room_el, "slot", id=str(profile.slots.index(s)+1), time=s.time, temp=str(s.temp), days=s.days)
                     # channel/url aktualisieren
                     if profile.channel is not None:
                         room_el.set("channel", profile.channel)
@@ -188,11 +190,25 @@ class ApiServer:
                 for s in profile.slots:
                     ET.SubElement(room_el, "slot", time=s.time, temp=str(s.temp), days=s.days)
 
+            # In einen String konvertieren
+            #xml_str = ET.tostring(root, encoding="utf-8")
+            # Mit minidom schön formatieren
+            #pretty_xml = minidom.parseString(xml_str).toprettyxml(indent="  ")
+
+            # In Datei schreiben
+            #with open(self.xml_file, "w", encoding="utf-8") as f:
+             #   f.write(pretty_xml)
+
             tree.write(self.xml_file, encoding="utf-8", xml_declaration=True)
             self.logger.Info(f"XML aktualisiert für Raum: {room_name}")
             self.controller.loadXml()
             return {"status": "ok"}
 
+        # Temperatur melden
+        @self.app.post("/api/temp/{room_name}")
+        def saveTemperature(room_name: str, temperature: float = Query(...)):
+            self.controller.setTemp(room_name, temperature)
+            return {"status": "ok"}  # Wichtig: Immer ein JSON zurückgeben!
     # ---------------------------
     # Server starten
     # ---------------------------

@@ -25,13 +25,16 @@ function renderRooms() {
             tr.setAttribute("data-slot", index);
 
             tr.innerHTML = `
-                <td>${room.name}</td>
+                <td>
+                    <span class="lamp ${slot.active ? 'green' : ''}"></span>
+                    <span class="lamp ${slot.heating ? 'on' : ''}"></span>
+                    ${room.name}
+                </td>
                 <td><strong>${room.current.toFixed(1)} °C</strong></td>
                 <td><input type="time" value="${slot.time}" onchange="updateSlotTime('${room.name}', ${index}, this.value)"></td>
                 <td><input type="number" step="0.5" value="${slot.temp}" onchange="updateSlotTemp('${room.name}', ${index}, this.value)"></td>
                 <td class="days-cell"></td>
                 <td>
-                    <button onclick="saveRoomSlot('${room.name}', ${index})">💾</button>
                     <button onclick="deleteSlot('${room.name}', ${index})">🗑️</button>
                 </td>
             `;
@@ -83,29 +86,6 @@ function updateSlotTemp(roomName, slotIndex, value) {
 function updateSlotDays(roomName, slotIndex, value) {
     const room = rooms.find(r => r.name === roomName);
     if (room) room.slots[slotIndex].days = value;
-}
-
-// Einzelnen Slot speichern
-async function saveRoomSlot(roomName, slotIndex) {
-    const room = rooms.find(r => r.name === roomName);
-    if (!room) return;
-
-    const slot = room.slots[slotIndex];
-    const profile = { name: roomName, slots: [slot] };
-
-    try {
-        const response = await fetch(`/api/rooms/${roomName}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(profile)
-        });
-        const result = await response.json();
-        if (result.status === "ok") alert("Slot gespeichert!");
-        else alert("Fehler: " + result.message);
-    } catch (err) {
-        console.error("Fehler beim Speichern:", err);
-        alert("Speicherfehler. Siehe Konsole.");
-    }
 }
 
 // Alle Slots eines Raums speichern

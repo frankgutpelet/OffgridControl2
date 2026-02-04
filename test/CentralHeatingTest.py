@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+import datetime
 
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -18,8 +19,25 @@ class LoggerMock():
     def Info(self, msg):
         print("INFO: " + msg)
 
+class dateTimeMock():
+    class Now():
+        def __init__(self):
+            self.timestamp = datetime.datetime.now().time()
+            self.weekDay = 1
+        def time(self):
+            return self.timestamp
+        def weekday(self):
+            return self.weekDay
+    def __init__(self):
+        self.timestamp = self.Now()
+        pass
+    def now(self):
+        return self.timestamp
+
+
 logger = LoggerMock()
-control = CentralHeatingControl("../rooms.xml", logger)
+datetimeMock = dateTimeMock()
+control = CentralHeatingControl("../rooms.xml", logger, datetimeMock=datetimeMock)
 
 while(True):
     time.sleep(1)

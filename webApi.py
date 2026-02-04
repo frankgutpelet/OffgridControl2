@@ -49,6 +49,10 @@ class ApiServer:
         self._thread = None
         self._setup_routes()
 
+    def getApp(self):
+        return self.app
+    def getThread(self):
+        return self._thread
 
     def _setup_routes(self):
         @self.app.get("/api/inverterValues", summary="Liefert aktuelle Inverter Werte")
