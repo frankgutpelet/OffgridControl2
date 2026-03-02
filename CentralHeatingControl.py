@@ -20,6 +20,10 @@ class TimeSlot(BaseModel):  # Von BaseModel erben!
     active : bool
     heating: bool
 
+class Actor(BaseModel):
+    on : str
+    off : str
+
 class CentralHeatingControl:
 
     weekday = {
@@ -33,10 +37,11 @@ class CentralHeatingControl:
     }
     temps = dict()
     rooms : list[dict]
-
+    actors : dict
     def __init__(self, xmlfile, logger, datetimeMock = None):
         logger.Info("CentralHeatingControl start..")
         self.xml_file = Path(xmlfile)
+        self.actors = dict()
         self.logger = logger
         self.tempPuller = TempPuller(self.logger)
         self.rooms = list()# Für dein Dictionary
@@ -45,6 +50,7 @@ class CentralHeatingControl:
         self.controlThread = threading.Thread(target=self.controlThread, daemon=True)
         self.controlThread.start()
         self.logger.Info("CentralHeatingControl started")
+        #{room : [actor1, actor2]}
         if not datetimeMock:
             self.dateTime = datetime.datetime
         else:
@@ -63,7 +69,7 @@ class CentralHeatingControl:
                     if room_data:
                         self.temps[room['name']] = float(room_data.get("temperature", "99.0"))
                 except Exception:
-                    self.logger.error("Error getting temperature for channel " + channel, traceback.format_exc())
+                    self.logger.Error(f"Error getting temperature for channel {channel}, {traceback.format_exc()}")
 
 
     def setTemp(self, room_name: str, temp: float):
@@ -116,6 +122,13 @@ class CentralHeatingControl:
                 )
                 self.timeslots.append(new_slot)
                 room_slots.append(new_slot)
+            self.actors[name] = list()
+            for actor in room_el.findall("actor"):
+                new_actor = Actor(
+                    on=actor.get("on"),
+                    off=actor.get("off"),
+                )
+                self.actors[name].append(new_actor)
 
     def controlThread(self):
         logging.debug("Control thread started")
@@ -131,10 +144,11 @@ class CentralHeatingControl:
                     else:
                         pass
                         #self.logger.Debug(f"Slot{slot.room.name} {slot.time} is not active")
+                self.handleActiveSlots(activeSlots)
             except:
-                self.logger.Error(f"Error in controlThread: {traceback.format_exc()}")
-            self.handleActiveSlots(activeSlots)
-            time.sleep(6)
+                #self.logger.Error(f"Error in controlThread: {traceback.format_exc()}")
+                pass
+            time.sleep(10)
 
     def isActive(self, slot: TimeSlot) -> bool:
         now = self.dateTime.now()
@@ -170,14 +184,15 @@ class CentralHeatingControl:
         return False
 
     def isToday(self, slot : TimeSlot, now : datetime.datetime) -> bool:
+        #self.logger.Debug(f"Today: {str(now.weekday())} , slot: {slot.day}")
         if slot.day == "1-7":
             return True
         if slot.day == "1-5":
-            if now.weekday() <= 5:
+            if now.weekday() <= 4:
                 return True
             return False
         if slot.day == "6-7":
-            if now.weekday() > 5:
+            if now.weekday() > 4:
                 return True
             return False
         if now.weekday() == self.weekday[slot.day]:
@@ -191,9 +206,11 @@ class CentralHeatingControl:
             slot : TimeSlot
             if slot.temp > self.getTemp(slot.room.name):
                 heatReq = True
+                self.switchActors(slot.room.name, True)
                 self.logger.Debug(f"Room {slot.room.name} needs to be heat")
                 slot.heating = True
             else:
+                self.switchActors(slot.room.name, False)
                 self.logger.Debug(f"Room {slot.room.name} doesn't need to be heat  {str(slot.temp)} <= {str(self.getTemp(slot.room.name))}")
                 slot.heating = False
         if heatReq:
@@ -206,13 +223,24 @@ class CentralHeatingControl:
             if slot.room.name == roomName and slot.id == slotId:
                 return slot.heating, slot.active
 
+    def switchActors(self, roomName : str, on : bool):
+        for actor in self.actors[roomName]:
+            if on:
+                self.logger.Debug(f"Switch actor {actor.on} ")
+                requests.get(actor.on)
+            else:
+                self.logger.Debug(f"Switch actor {actor.off} ")
+                requests.get(actor.off)
 
     def heatPump(self, on : bool):
-        if on:
-            requests.get("http://zentralheizung/cm?cmnd=Power%20On")
-        else:
-            requests.get("http://zentralheizung/cm?cmnd=Power%20Off")
-
+        try:
+            if on:
+                requests.get("http://zentralheizung/cm?cmnd=Power%20On")
+            else:
+                requests.get("http://zentralheizung/cm?cmnd=Power%20Off")
+        except:
+            self.logger.Error(f"no connection to Zentralheizung: {traceback.format_exc}")
+            
 
 
 

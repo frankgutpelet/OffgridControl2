@@ -54,3 +54,9 @@ class IInverter(ABC):
     @abstractmethod
     def setPowerSave(self, on : bool):
         raise NotImplementedError
+    @abstractmethod
+    def setMode(self, mode : str):
+        raise NotImplementedError
+    @abstractmethod
+    def mode(self):
+        raise NotImplementedError

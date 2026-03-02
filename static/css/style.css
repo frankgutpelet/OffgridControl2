@@ -230,3 +230,74 @@ table tr:hover {
 .lamp.green {
     background-color: #008000;
 }
+
+/******************************* style für hand auto umschalter ****************************************/
+.mode-switch-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 30px;
+}
+
+.mode-switch-label {
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.mode-switch {
+    position: relative;
+    display: flex;
+    width: 180px;
+    height: 40px;
+    background: #1f1f1f;
+    border-radius: 25px;
+    overflow: hidden;
+    border: 2px solid #444;
+}
+
+.mode-switch input {
+    display: none;
+}
+
+.mode-switch label {
+    flex: 1;
+    text-align: center;
+    line-height: 40px;
+    cursor: pointer;
+    z-index: 2;
+    font-weight: 600;
+    color: #bbb;
+    transition: color 0.3s;
+}
+
+.mode-switch .slider {
+    position: absolute;
+    width: 33.33%;
+    height: 100%;
+    background: linear-gradient(145deg, #4caf50, #2e7d32);
+    border-radius: 25px;
+    transition: transform 0.3s ease;
+    z-index: 1;
+}
+
+/* Positionen */
+#mode-off:checked ~ .slider {
+    transform: translateX(0%);
+    background: linear-gradient(145deg, #d32f2f, #8b0000);
+}
+
+#mode-auto:checked ~ .slider {
+    transform: translateX(100%);
+    background: linear-gradient(145deg, #ff9800, #ef6c00);
+}
+
+#mode-on:checked ~ .slider {
+    transform: translateX(200%);
+    background: linear-gradient(145deg, #4caf50, #2e7d32);
+}
+
+#mode-off:checked ~ label[for="mode-off"],
+#mode-auto:checked ~ label[for="mode-auto"],
+#mode-on:checked ~ label[for="mode-on"] {
+    color: white;
+}

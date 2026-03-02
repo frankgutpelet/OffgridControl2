@@ -8,12 +8,14 @@ from MyLogging import Logging
 import traceback
 import json
 
+
 class SPF6000Inverter(IInverter):
     """
     Implementation for Growatt SPF 6000 ES Plus
     """
     logger : Logging
     inverterOfflineCounter : int
+    _mode : str
     def __init__(self, logger : Logging, port="/dev/ttyUSB0", baudrate=9600, unit=1):
         self.logger = logger
         self.client = ModbusSerialClient(
@@ -27,6 +29,14 @@ class SPF6000Inverter(IInverter):
         )
         self.unit = unit
         self.inverterOfflineCounter = 0
+        self._mode = "AUTO"
+
+    def setMode(self, mode : str):
+        self._mode = mode
+        self.logger.Info(f"Set mode to {mode}")
+
+    def mode(self):
+        return self._mode
 
     def read_register(self, addr, count=1):
         if 0 != self.inverterOfflineCounter:

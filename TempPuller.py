@@ -32,7 +32,7 @@ class TempPuller:
         while True:
             for sensor in self.sensors:
                 try:
-                    response = requests.get(sensor.url, timeout=0.8)
+                    response = requests.get(sensor.url, timeout=1)
 
                     if response.status_code == 200:
                         data = response.json()

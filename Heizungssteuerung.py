@@ -99,6 +99,8 @@ class HeizungsPage:
                     heating=False
                 ))
 
+
+
             self.room_profiles[name] = {
                 "slots": slots,
                 "channel": channel,
@@ -169,7 +171,7 @@ class HeizungsPage:
             for room_el in root.findall("room"):
                 if room_el.get("name") == room_name:
                     # Alte Slots löschen
-                    for s in list(room_el):
+                    for s in room_el.findall("slot"):
                         room_el.remove(s)
                     # Neue Slots einfügen
                     for s in profile.slots:

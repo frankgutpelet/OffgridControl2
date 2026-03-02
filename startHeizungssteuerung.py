@@ -28,6 +28,7 @@ class StreamToMyLogger:
 
 def main():
 
+    
     print("started")
     logger = Logging(logfile="log/Heizungssteuerung_")
     logger.setLogLevel("DEBUG")

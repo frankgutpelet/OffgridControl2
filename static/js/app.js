@@ -179,3 +179,16 @@ async function updateTemperatures() {
     }
 }
 
+document.querySelectorAll('input[name="mode"]').forEach(radio => {
+    radio.addEventListener("change", () => {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        console.log("Neuer Modus:", mode);
+
+        fetch("/api/set_mode", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ "name" : "", "mode": mode })
+        });
+    });
+});
+

@@ -1,20 +1,21 @@
 <?xml version="1.0" ?>
 <Settings>
-    <BatterySettings minimumSOC="40" maxCurrentA="150"/>
-    <InverterSettings maxPowerW="6000"/>
-    <Logging loglevel="INFO" file="log/Offgrid-[date].log"/>
-    <Approvals>
+  <BatterySettings minimumSOC="25" maxCurrentA="150"/>
+  <InverterSettings maxPowerW="6000"/>
+  <Logging loglevel="INFO" file="log/Offgrid-[date].log"/>
+  <Approvals>
     <App name="BettSabrina" dns="WasserbettSabrina" prio="1" supply="" mode="AUTO" soc="60">
-      <Timer soc="45" on="08:00" off="18:00"/>
+      <Timer soc="65" on="08:00" off="18:00"/>
     </App>
     <App name="BettFrank" dns="WasserbettFrank" prio="2" supply="" mode="AUTO" soc="60">
-      <Timer soc="46" on="08:00" off="18:00"/>
+      <Timer soc="55" on="08:00" off="18:00"/>
     </App>
     <App name="E-Bike Ladestation" dns="ebike" prio="3" supply="" mode="AUTO" soc="30" minTimeRunningMinutes="10"/>
     <App name="Aquarium EG" dns="solarfreigabe11" prio="4" supply="" mode="AUTO" soc="70"/>
+    <App name="Gefrierschrank" dns="solarfreigabe10" prio="4" supply="" mode="AUTO" soc="75"/>
     <App name="Fussbodenheizung" dns="fussbodenheizungbad" prio="6" supply="" mode="AUTO" soc="35">
       <Timer soc="40" on="03:30" off="06:00"/>
       <Timer soc="95" on="07:00" off="20:00"/>
     </App>
-    </Approvals>
+  </Approvals>
 </Settings>

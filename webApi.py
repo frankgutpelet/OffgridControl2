@@ -120,6 +120,18 @@ class ApiServer:
         def api_get_temperatures():
             return {"temperatures": self.getTemperatures()}
 
+        @self.app.post("/api/set_mode", summary="Setzt aktuelle Mode ON/AUTO/OFF")
+        def api_set_mode(body : ConsumerBody):
+            data = json.loads(body.model_dump_json())
+            try:
+                if not data['mode'] in ["on", "auto", "off"]:
+                    return {"status": "Error - wrong status"}
+                self.logger.Debug(f"Set mode to {data['mode']}")
+                self.inverter.setMode(data['mode'])
+            except:
+                self.logger.Error(traceback.format_exc())
+                return {"status": "Error"}
+
     def getTemperatures(self):
         # TempReader liefert lokale Sensorwerte
         tempReader = TempReader()
