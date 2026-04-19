@@ -4,7 +4,7 @@
   "Wohnen" : {"id" :  "channel2"},
   "Aussen" : {"id" :  "channel3"},
   "Alex" : {"id" :  "channel4"},
-  "Pool" : {"url" :  "http://tempsensor/temp"},
+  "Pool" : {"url" :  "http://poolthermometer/temp"},
   "Aquarium EG" : {"url" :  "http://solarfreigabe11/temp"},
   "Wasserbett Frank" : {"url" :  "http://wasserbettfrank/temp"},
   "Wasserbett Sabrina" : {"url" :  "http://wasserbettsabrina/temp"},

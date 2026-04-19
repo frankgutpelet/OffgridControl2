@@ -12,6 +12,7 @@ from Consumer import Consumer
 from Settings import Settings
 import traceback, json, requests
 from TempReader import TempReader
+from concurrent.futures import ThreadPoolExecutor
 
 
 class ConsumerBody(BaseModel):
@@ -47,6 +48,10 @@ class ApiServer:
         self.app.mount("/static", StaticFiles(directory="static"), name="static")
         self.templates = Jinja2Templates(directory="templates")
         self._thread = None
+        self.table_data = []
+        self.executor = ThreadPoolExecutor(max_workers=5)
+        self.__checkConfig()
+        self.tempReader = TempReader()
         self._setup_routes()
 
     def getApp(self):
@@ -54,9 +59,23 @@ class ApiServer:
     def getThread(self):
         return self._thread
 
+    def renewData(self):
+        self.__checkConfig()
+        self.__readTemperatures()
+
+    def __checkConfig(self):
+        # config.json laden
+        try:
+            with open("config.json", "r") as f:
+                self.config = json.load(f)
+        except Exception as e:
+            print("Fehler beim Laden der config.json:", e)
+            return []
+
+
     def _setup_routes(self):
         @self.app.get("/api/inverterValues", summary="Liefert aktuelle Inverter Werte")
-        def get_inverter_values():
+        async def get_inverter_values():
             return {"values": self.inverter.getValues().toJson()}
 
         @self.app.get("/api/get_consumers", summary="Liefert aktuelle Consumers und deren Status")
@@ -133,42 +152,34 @@ class ApiServer:
                 return {"status": "Error"}
 
     def getTemperatures(self):
-        # TempReader liefert lokale Sensorwerte
-        tempReader = TempReader()
-        values = tempReader.getValues()
+        return self.table_data
 
-        table_data = []
+    def __readTemperatures(self):
+        values = self.tempReader.getValues()
 
-        # config.json laden
-        try:
-            with open("config.json", "r") as f:
-                config = json.load(f)
-        except Exception as e:
-            print("Fehler beim Laden der config.json:", e)
-            return []
-
-        # Lokale Sensoren
-        for setting in config:
+        def process(setting):
+            cfg = self.config[setting]
             temp = None
-            if "id" in config[setting] and config[setting]["id"] in values:
-                val = values[config[setting]["id"]].get("temperature")
+
+            if "id" in cfg and cfg["id"] in values:
+                val = values[cfg["id"]].get("temperature")
                 if val != "":
                     try:
                         temp = float(val)
                     except:
-                        temp = None
+                        pass
 
-            # Externe Sensoren über URL
-            if "url" in config[setting]:
+            if "url" in cfg:
                 try:
-                    res = requests.get(config[setting]["url"], timeout=2)
+                    res = requests.get(cfg["url"], timeout=2)
                     temp = float(res.text.replace(",", "."))
                 except:
                     temp = None
 
-            table_data.append({"name": setting, "temp": temp})
+            return {"name": setting, "temp": temp}
+        results = list(self.executor.map(process, list(self.config.keys())))
 
-        return table_data
+        self.table_data = results
 
     def start(self):
         """Startet den Server in einem separaten Thread."""

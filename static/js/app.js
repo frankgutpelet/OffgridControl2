@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     updateAll();
-    setInterval(updateAll, 1000);
+    setInterval(updateAll, 500);
 });
 
 async function updateTemperatures() {

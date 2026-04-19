@@ -8,7 +8,6 @@ from MyLogging import Logging
 from SonoffSwitch import SonoffSwitch
 from FrontendInterface import FrontendInterface
 import time, json
-import threading
 import traceback
 import os
 from webApi import ApiServer
@@ -18,7 +17,7 @@ supplySwitch : SonoffSwitch
 consumerIndex : int
 consumers : list
 inverter : IInverter
-frontEnd : FrontendInterface
+#frontEnd : FrontendInterface
 inverterValues : IInverter.InverterValues
 logger : Logging
 opened_time_Settings : float
@@ -36,7 +35,6 @@ def main():
     consumers = settings.apps
     inverter = SPF6000Inverter(logger)
     supplySwitch = SonoffSwitch(logger)
-    frontEnd = FrontendInterface(logger)
 
     consumers = list()
     for app in settings.apps:
@@ -46,15 +44,18 @@ def main():
     api.start()
 
     inverterValues = inverter.getValues()
-    frontEndThread = threading.Thread(target=frontEndThreadFunc, daemon=True)
-    frontEndThread.start()
-    logger.Debug("Thread started")
 
 
     while(True):
         try:
+            logger.Debug("main loop")
             inverterValues = inverter.getValues()
+            api.renewData()
             if handleHandAuto():
+                time.sleep(1)
+                continue
+            if not inverterValues:
+                logger.Error("No InverterValues")
                 time.sleep(1)
                 continue
             if handleOvercurrent(settings.battery, inverterValues.BatteryCurrent):
@@ -71,16 +72,18 @@ def handleHandAuto():
     mode = inverter.mode()
     if 'on' == mode:
         inverter.setPowerSave(False)
+        logger.Info("Mode is ON - no automatic")
         time.sleep(5)
         supplySwitch.switch(SonoffSwitch.SwitchState.ON)
-        return False
+        return True
     elif 'off' == mode:
         supplySwitch.switch(SonoffSwitch.SwitchState.OFF)
+        logger.Info("Mode is OFF - no automatic")
         time.sleep(1)
         inverter.setPowerSave(True)
-        return False
-    return True
-
+        return True
+    return False
+"""
 def frontEndThreadFunc():
     global logger
     logger.Debug("Frontend Tread started")
@@ -90,7 +93,7 @@ def frontEndThreadFunc():
         except:
             logger.Error("sendTo Frontend failed: " + traceback.format_exc())
         time.sleep(1)
-
+"""
 def checkSettings():
     global opened_time_Settings, consumers, logger
     if opened_time_Settings != os.path.getmtime("Settings.xml"):
@@ -119,7 +122,7 @@ def handleMinimalSOC(batterySettings : BatterySettings, soc : int):
     global state, logger
     logger.Debug("Check SOC")
     if batterySettings.minimumSOC > soc:
-        logger.Debug("SOC to low: " + str(soc) + "% < " + str(batterySettings.minimumSOC) + "%" )
+        logger.Debug("SOC too low: " + str(soc) + "% < " + str(batterySettings.minimumSOC) + "%" )
         switchSolarSupply(False)
         switchOffConsumers()
         timeout(5)
@@ -142,14 +145,24 @@ def handleNextConsumer(batterySettings : BatterySettings, inverterSettings : Inv
     # eingeschaltet, ansonsten wird einer ausgeschaltet
     logger.Debug("Consumer " + str(consumerIndex))
     if 'on' == consumer.mode.lower():
-        logger.Debug(f"Consumer {consumerIndex} is ON")
+        logger.Debug(f"Consumer {consumers[consumerIndex].name} is ON")
         consumer.approve(0)
+        consumer.push()
+        consumerIndex += 1
+        if consumerIndex >= len(consumers):
+            consumerIndex = 0
+        return
     elif 'off' == consumer.mode.lower():
-        logger.Debug(f"Consumer {consumerIndex} is OFF")
+        logger.Debug(f"Consumer {consumers[consumerIndex].name} is OFF")
         consumer.prohibit(True)
+        consumer.push()
+        consumerIndex += 1
+        if consumerIndex >= len(consumers):
+            consumerIndex = 0
+        return
     if noAuto:
         if 'auto' == consumer.mode.lower():
-            logger.Debug(f"Consumer {consumerIndex} is OFF")
+            logger.Debug(f"Consumer {consumers[consumerIndex].name} is OFF")
             consumer.prohibit(True)
         logger.Debug("NO AUTO")
         consumer.push()

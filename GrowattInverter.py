@@ -1,11 +1,12 @@
 import logging
 
 import requests
-
+import time
 from IInverter import IInverter
 from pymodbus.client import ModbusSerialClient
 from MyLogging import Logging
 import traceback
+import threading
 import json
 
 
@@ -18,6 +19,21 @@ class SPF6000Inverter(IInverter):
     _mode : str
     def __init__(self, logger : Logging, port="/dev/ttyUSB0", baudrate=9600, unit=1):
         self.logger = logger
+        self.values = IInverter.InverterValues(
+                VoltageSolar1=0,
+                CurrentSolar1=0,
+                PowerSolar1=0,
+                VoltageSolar2=0,
+                CurrentSolar2=0,
+                PowerSolar2=0,
+                SOC=0,
+                BatteryVoltage=0,
+                BatteryCurrent=0,
+                BatteryPower=0,
+                InverterOutputVoltage=0,
+                InverterOutputPower=0,
+                MainsPower=0,
+            )
         self.client = ModbusSerialClient(
             port=port,
             framer="rtu",
@@ -27,9 +43,27 @@ class SPF6000Inverter(IInverter):
             stopbits=1,
             timeout=2,
         )
+        self.client.connect()
         self.unit = unit
         self.inverterOfflineCounter = 0
         self._mode = "AUTO"
+        try:
+            self.__readValues()
+        except:
+            pass
+        self.thread = threading.Thread(target=self.__threadFunc, daemon=True)
+        self.thread.start()
+
+    def __threadFunc(self):
+        while True:
+            try:
+                self.__readValues()
+            except:
+                self.logger.Error(traceback.format_exc())
+                self.logger.Info("Try reconnect to modbus")
+                if not self.client.connect():
+                    raise self.logger.Error("Failed to connect to modbus")
+            time.sleep(10)
 
     def setMode(self, mode : str):
         self._mode = mode
@@ -60,29 +94,15 @@ class SPF6000Inverter(IInverter):
             regs,
             data_type=self.client.DATATYPE.UINT32,
         )
+    def getValues(self):
+        return self.values
 
-    def getValues(self) -> IInverter.InverterValues:
+    def __readValues(self) -> IInverter.InverterValues:
         #self.logger.Debug("".join(traceback.format_stack()))
         if 0 != self.inverterOfflineCounter:
             self.logger.Debug("Inverter timeout")
             self.inverterOfflineCounter -= 1
-            return IInverter.InverterValues(
-                VoltageSolar1=0,
-                CurrentSolar1=0,
-                PowerSolar1=0,
-                VoltageSolar2=0,
-                CurrentSolar2=0,
-                PowerSolar2=0,
-                SOC=0,
-                BatteryVoltage=0,
-                BatteryCurrent=0,
-                BatteryPower=0,
-                InverterOutputVoltage=0,
-                InverterOutputPower=0,
-                MainsPower=0,
-            )
-        if not self.client.connect():
-            raise ConnectionError("Inverter connection failed")
+            return
 
         try:
             # Solar Strings
@@ -122,7 +142,7 @@ class SPF6000Inverter(IInverter):
             inv_power = 60 * inv_load_percent
             MainsPower = 0
             try:
-                response = requests.get("http://wattwaechter/cm?cmnd=Status%208")
+                response = requests.get("http://wattwaechter/cm?cmnd=Status%208", timeout=10)
                 data = response.json()
                 #self.logger.Debug(f"response from Wattwaechter: {response.status_code} , Data: {json.dumps(data)}")
                 if 200 != response.status_code:
@@ -131,7 +151,7 @@ class SPF6000Inverter(IInverter):
                 else:
                     MainsPower = data.get("StatusSNS", {}).get("MT631", {}).get("P", None)
             except Exception as e:
-                self.logger.Error(e)
+                self.logger.Error(traceback.format_exc())
             if not MainsPower:
                 MainsPower = -1
 
@@ -153,7 +173,7 @@ class SPF6000Inverter(IInverter):
                 MainsPower=int(MainsPower)
             )
             self.logger.Info("Read Inverter Data: " + values.toString())
-            return values
+            self.values = values
 
         except:
             self.logger.Error("Exception while reading inverter values: " + traceback.format_exc())

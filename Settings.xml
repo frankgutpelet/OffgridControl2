@@ -2,7 +2,7 @@
 <Settings>
   <BatterySettings minimumSOC="25" maxCurrentA="150"/>
   <InverterSettings maxPowerW="6000"/>
-  <Logging loglevel="INFO" file="log/Offgrid-[date].log"/>
+  <Logging loglevel="DEBUG" file="log/Offgrid-[date].log"/>
   <Approvals>
     <App name="BettSabrina" dns="WasserbettSabrina" prio="1" supply="" mode="AUTO" soc="60">
       <Timer soc="65" on="08:00" off="18:00"/>
@@ -14,8 +14,13 @@
     <App name="Aquarium EG" dns="solarfreigabe11" prio="4" supply="" mode="AUTO" soc="70"/>
     <App name="Gefrierschrank" dns="solarfreigabe10" prio="4" supply="" mode="AUTO" soc="75"/>
     <App name="Fussbodenheizung" dns="fussbodenheizungbad" prio="6" supply="" mode="AUTO" soc="35">
-      <Timer soc="40" on="03:30" off="06:00"/>
-      <Timer soc="95" on="07:00" off="20:00"/>
+      <Timer soc="35" on="04:30" off="06:00"/>
+      <Timer soc="90" on="07:00" off="20:00"/>
+    </App>
+    <App name="Poolpumpe" dns="poolpumpe" prio="7" supply="" mode="AUTO" soc="40">
+      <Timer soc="60" on="10:00" off="12:00"/>
+      <Timer soc="40" on="12:00" off="17:00"/>
+      <Timer soc="80" on="17:00" off="19:00"/>
     </App>
   </Approvals>
 </Settings>
