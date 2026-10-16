@@ -150,8 +150,8 @@ class SPF6000Inverter(IInverter):
                     MainsPower = -1
                 else:
                     MainsPower = data.get("StatusSNS", {}).get("MT631", {}).get("P", None)
-            except Exception as e:
-                self.logger.Error(traceback.format_exc())
+            except:
+                self.logger.Error("Verbindung zu wattwaechter nicht möglich")
             if not MainsPower:
                 MainsPower = -1
 
@@ -185,3 +185,8 @@ class SPF6000Inverter(IInverter):
         else:
             print("set standby enable")
             result = self.client.write_register(address=0, value=0x0101)
+
+    def setChargeEnable(self, enable: bool) -> bool:
+        # nicht möglich, außer durch ein workaround:
+        # soc abspeichern - batterietyp auf user (kommunikation zum akku unterbrochen) - ladestrom auf 0 - zyklisch umstellen und prüfen ob der soc gesunken ist.
+        pass

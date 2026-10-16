@@ -8,23 +8,44 @@ class Logging(object):
         print("DEBUG: " + message)
     def Error(self, message):
         print("ERROR: " + message)
+    def Info(self, message):
+        print("INFO: " + message)
 
 logger = Logging()
-values : IInverter.InverterValues
+values: IInverter.InverterValues
 
 inverter = SPF6000Inverter(logger)
 
 while True:
     values = inverter.getValues()
     print(values.toString())
-    print("\nPower Save Mode? Y/N Quit: Q")
-    answer = input()
-    if answer.lower() == "n":
+
+    print("\nPower Save Mode? Y/N")
+    print("Charge Enable? C (on) / D (off)")
+    print("Quit: Q")
+
+    answer = input().lower()
+
+    if answer == "n":
         print("\nDisable Power save mode")
         inverter.setPowerSave(False)
-    if answer.lower() == "y":
+
+    elif answer == "y":
         print("\nEnable Power save mode")
         inverter.setPowerSave(True)
-    if answer.lower() == "q":
+
+    elif answer == "c":
+        print("\nEnable Charging")
+        inverter.setChargeEnable(True)
+
+    elif answer == "d":
+        print("\nDisable Charging")
+        inverter.setChargeEnable(False)
+
+    elif answer == "q":
         exit(0)
+
+    else:
+        print("Unknown command")
+
     continue

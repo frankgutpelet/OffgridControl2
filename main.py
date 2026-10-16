@@ -11,6 +11,7 @@ import time, json
 import traceback
 import os
 from webApi import ApiServer
+from Homey import Homey
 
 
 supplySwitch : SonoffSwitch
@@ -35,6 +36,7 @@ def main():
     consumers = settings.apps
     inverter = SPF6000Inverter(logger)
     supplySwitch = SonoffSwitch(logger)
+    myHomey = Homey(inverter, logger)
 
     consumers = list()
     for app in settings.apps:
@@ -173,7 +175,8 @@ def handleNextConsumer(batterySettings : BatterySettings, inverterSettings : Inv
     #todo Dies muss noch validiert werden, nicht dass hier ein Verbraucher die ganze Zeit ein- und wieder ausgeschaltet wird
     elif(     ((batterySettings.maxCurrentA - 30) > (-inverterValues.BatteryCurrent))
         and ((inverterSettings.maxPower - 1000) > inverterValues.InverterOutputPower))\
-        and 50 < (inverterValues.PowerSolar1 + inverterValues.PowerSolar2):
+        and (   50 < (inverterValues.PowerSolar1 + inverterValues.PowerSolar2)
+              or consumer.supply.lower() == 'battery'):
         logger.Debug("Approve AUTO Consumer " + str(consumerIndex))
         consumer.approve(inverterValues.SOC)
     else:

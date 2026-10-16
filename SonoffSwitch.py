@@ -10,7 +10,7 @@ class SonoffSwitch:
         ERROR = 4
 
     channel = "POWER2" # POWER2
-    switchDNS = "192.168.178.25"
+    switchDNS = "sonoff4ch"
 
 
 
@@ -21,8 +21,10 @@ class SonoffSwitch:
     def getSwitchState(self):
         try:
             response = requests.get("http://" + self.switchDNS + "/cm?cmnd=" + self.channel, timeout = 1)
+
         except requests.exceptions.RequestException:
             return SonoffSwitch.SwitchState.OFFLINE
+
         except:
             return SonoffSwitch.SwitchState.ERROR
 

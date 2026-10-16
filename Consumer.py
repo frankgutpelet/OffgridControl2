@@ -38,6 +38,7 @@ class Consumer():
         self.__dns = settings.dns
         self.mode = settings.mode
         self.prio = settings.prio
+        self.supply = settings.supply
         self.logger = logger
         self.timestampOn = 0
         self.minTime = 0
@@ -57,6 +58,8 @@ class Consumer():
 
     def updateSettings(self, settings : App):
         self.mode = settings.mode
+        self.supply = settings.supply
+        self.prio = settings.prio
 
     def approve(self, soc : int):
         oldState = self.isOn

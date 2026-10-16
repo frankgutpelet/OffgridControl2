@@ -7,5 +7,8 @@ class TempReader:
 
 
     def getValues(self):
-        ret = json.loads(requests.get('http://lmair/weather.json').text)
+        try:
+            ret = json.loads(requests.get('http://lmair/weather.json').text)
+        except:
+            ret = {}
         return ret
