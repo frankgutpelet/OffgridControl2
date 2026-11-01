@@ -113,7 +113,7 @@ class Consumer():
         try:
             self.logger.Debug("send command to " + self.__dns + ": " + cmd)
             self.logger.Debug(self.__dns + "/cm?cmnd=Power%20" + cmd)
-            response = requests.get("http://" + self.__dns + "/cm?cmnd=Power%20" + cmd)
+            response = requests.get("http://" + self.__dns + "/cm?cmnd=Power%20" + cmd, timeout=2)
             if 200 != response.status_code:
                 raise Exception
         except Exception:

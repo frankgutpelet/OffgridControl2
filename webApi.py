@@ -27,7 +27,7 @@ class ApiServer:
     consumerList : list[Consumer]
     settings : Settings
 
-    def __init__(self, logger, sonoff, consumers, inverter, settings, host="0.0.0.0", port=8000):
+    def __init__(self, logger, sonoff, consumers, inverter, settings, host="0.0.0.0", port=8000, homey=None):
         """
         backend: Instanz deines bestehenden Backends
         host, port: Serverkonfiguration
@@ -37,6 +37,7 @@ class ApiServer:
         self.consumerList = consumers
         self.sonoff = sonoff
         self.settings = settings
+        self.homey = homey
         self.host = host
         self.port = port
         self.app = FastAPI(
@@ -74,6 +75,12 @@ class ApiServer:
 
 
     def _setup_routes(self):
+        @self.app.get("/api/mqtt_status", summary="Liefert den MQTT-Verbindungsstatus")
+        async def get_mqtt_status():
+            if self.homey is None:
+                return {"state": "not_configured", "connected": False, "last_error": "MQTT-Modul ist nicht initialisiert"}
+            return self.homey.getStatus()
+
         @self.app.get("/api/inverterValues", summary="Liefert aktuelle Inverter Werte")
         async def get_inverter_values():
             return {"values": self.inverter.getValues().toJson()}

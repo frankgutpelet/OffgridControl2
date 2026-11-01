@@ -36,13 +36,13 @@ def main():
     consumers = settings.apps
     inverter = SPF6000Inverter(logger)
     supplySwitch = SonoffSwitch(logger)
-    myHomey = Homey(inverter, logger)
+    myHomey = Homey(inverter, logger, supplySwitch)
 
     consumers = list()
     for app in settings.apps:
         consumers.append(Consumer(app, logger))
 
-    api = ApiServer(logger, supplySwitch, consumers, inverter, settings)
+    api = ApiServer(logger, supplySwitch, consumers, inverter, settings, homey=myHomey)
     api.start()
 
     inverterValues = inverter.getValues()
@@ -100,7 +100,7 @@ def checkSettings():
     global opened_time_Settings, consumers, logger
     if opened_time_Settings != os.path.getmtime("Settings.xml"):
         opened_time_Settings = os.path.getmtime("Settings.xml")
-        logger.Debug("Settings wurden geändert. Reload")
+        logger.Debug("Settings wurden geÃ¤ndert. Reload")
         settings = None
         settings = Settings.from_xml_file("Settings.xml")
         logger.setLogLevel(settings.logging.loglevel)
@@ -143,7 +143,7 @@ def handleNextConsumer(batterySettings : BatterySettings, inverterSettings : Inv
     global consumers, consumerIndex, inverter, inverterValues, logger
     inverterValues = inverter.getValues()
     consumer = consumers[consumerIndex]
-    # Wenn der Inverter und die Batterie noch nicht an der Obergrenze ist wird noch ein zusätzlicher Verbraucher
+    # Wenn der Inverter und die Batterie noch nicht an der Obergrenze ist wird noch ein zusÃ¤tzlicher Verbraucher
     # eingeschaltet, ansonsten wird einer ausgeschaltet
     logger.Debug("Consumer " + str(consumerIndex))
     if 'on' == consumer.mode.lower():
@@ -263,4 +263,5 @@ def sendDataToFrontend():
 
 if __name__ == '__main__':
     main()
+
 
