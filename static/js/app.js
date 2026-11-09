@@ -11,12 +11,12 @@ document.addEventListener("DOMContentLoaded", () => {
         overlayImage.src = img.src; // Bild im Overlay anzeigen
     });
 
-    // Overlay schließen
+    // Overlay schlieÃŸen
     closeBtn.addEventListener("click", () => {
         overlay.style.display = "none";
     });
 
-    // Overlay schließen, wenn man außerhalb des Bildes klickt
+    // Overlay schlieÃŸen, wenn man auÃŸerhalb des Bildes klickt
     overlay.addEventListener("click", (e) => {
         if (e.target === overlay) overlay.style.display = "none";
     });
@@ -48,7 +48,14 @@ document.addEventListener("DOMContentLoaded", () => {
     async function updateInverterData() {
         try {
             const res = await fetch('/api/inverterValues');
-            const supply = await fetch('/api/get_supplyState')
+            const supply = await fetch('/api/get_supplyState');
+            let victron = { chargers: [], total_solar_power: 0 };
+            try {
+                const victronResponse = await fetch('/api/victronValues');
+                if (victronResponse.ok) victron = await victronResponse.json();
+            } catch (victronError) {
+                console.warn('Victron-Daten nicht verfÃ¼gbar; Gesamtleistung ohne Victron:', victronError);
+            }
 
             if (200 != res.status){
                 console.error("failed to fetch data for inverterValues: " + res.statusText)
@@ -60,15 +67,20 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const json = await res.json();
-            const json2 = await supply.json()
+            const json2 = await supply.json();
             const data = json.values;
             console.log(data.MainsPower.toFixed(0) + ' W')
             //console.log(JSON.stringify(json2))
 
-            // 🔋 Inverterdaten anzeigen
+            // ðŸ”‹ Inverterdaten anzeigen
             document.getElementById('batV').textContent = data.BatteryVoltage.toFixed(1) + ' V';
-            document.getElementById('batI').textContent = data.BatteryCurrent.toFixed(1) + ' A';
-            document.getElementById('batP').textContent = (parseInt(data.BatteryVoltage) * parseInt(data.BatteryCurrent)).toFixed(0) + ' W';
+            const victronChargingCurrent = (victron.chargers || []).reduce((total, charger) => {
+                return total + (charger.online ? (Number(charger.charging_current) || 0) : 0);
+            }, 0);
+            const totalChargingCurrent = Number(data.BatteryCurrent) + victronChargingCurrent;
+            document.getElementById('batI').textContent = totalChargingCurrent.toFixed(1) + ' A';
+            const batteryPower = Number(data.BatteryVoltage) * totalChargingCurrent;
+            document.getElementById('batP').textContent = batteryPower.toFixed(0) + ' W';
             document.getElementById('pan1I').textContent = data.CurrentSolar1.toFixed(1) + ' A';
             document.getElementById('pan2I').textContent = data.CurrentSolar2.toFixed(1) + ' A';
             document.getElementById('sol1V').textContent = data.VoltageSolar1.toFixed(1) + ' V';
@@ -83,15 +95,26 @@ document.addEventListener("DOMContentLoaded", () => {
             // Batteriegrafik aktualisieren
             const batteryLevel = document.getElementById('battery-level');
             const soc = parseFloat(data.SOC);
-            const solarPower = parseInt(data.PowerSolar1) + parseInt(data.PowerSolar2)
+            const solarPower = parseInt(data.PowerSolar1) + parseInt(data.PowerSolar2) + Number(victron.total_solar_power || 0);
+            if (document.getElementById('solar-total-row')) {
+                document.querySelectorAll('tr[data-victron]').forEach(row => row.remove());
+                const rows = victron.chargers.map(charger => {
+                    const state = charger.online ? '' : ' (offline)';
+                    return '<tr data-victron><th>' + charger.name + ' Ladestrom</th><td><strong>' + Number(charger.charging_current).toFixed(1) + ' A' + state + '</strong></td></tr>' +
+                           '<tr data-victron><th>' + charger.name + ' Solarleistung</th><td><strong>' + Number(charger.solar_power).toFixed(0) + ' W</strong></td></tr>';
+                }).join('');
+                document.getElementById('solar-total-row').insertAdjacentHTML('beforebegin', rows);
+            }
+            const totalElement = document.getElementById('solar-total');
+            if (totalElement) totalElement.textContent = solarPower.toFixed(0) + ' W';
             if (batteryLevel) {
                 batteryLevel.style.height = soc + '%';
                 batteryLevel.style.backgroundColor = soc < 20 ? 'red' : 'green';
             }
 
             document.getElementById('soc-display').textContent = soc + '%';
-            document.getElementById('tachometer-label').textContent = solarPower + ' W';
-            updateGraphics(parseFloat(data.BatteryCurrent), solarPower);
+            document.getElementById('tachometer-label').textContent = solarPower.toFixed(0) + ' W';
+            updateGraphics(Number(data.BatteryCurrent), solarPower);
 
         } catch (err) {
             console.error("Fehler beim Abrufen der Inverterdaten:", err);
@@ -125,10 +148,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Klick-Handler für Geräte
+    // Klick-Handler fÃ¼r GerÃ¤te
     document.getElementById('device-table').addEventListener('click', e => {
         const target = e.target;
-        console.log("Button gedrückt")
+        console.log("Button gedrÃ¼ckt")
         if (target.classList.contains('device-button')) {
             const mode = target.dataset.mode;
             const name = target.dataset.device;
@@ -138,10 +161,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ name, mode })
             })
             .then(res => res.json())
-            .then(data => console.log('Gerät geändert:', data))
+            .then(data => console.log('GerÃ¤t geÃ¤ndert:', data))
             .catch(err => console.error(err));
         }
     });
+
+    async function updateMqttStatus() {
+        const stateElement = document.getElementById('mqtt-status-state');
+        const detailsElement = document.getElementById('mqtt-status-details');
+        const indicator = document.getElementById('mqtt-status-indicator');
+        if (!stateElement || !detailsElement || !indicator) return;
+        try {
+            const response = await fetch('/api/mqtt_status');
+            const status = await response.json();
+            const connected = status.connected === true;
+            stateElement.textContent = connected ? 'Verbunden' : (status.state === 'connecting' ? 'Verbindungsaufbau' : 'Getrennt');
+            indicator.className = 'mqtt-status-indicator ' + (connected ? 'online' : 'offline');
+            const endpoint = `${status.broker || '?'}:${status.port || '?'}`;
+            const lastPublish = status.last_published ? new Date(status.last_published).toLocaleTimeString() : 'noch keiner';
+            detailsElement.textContent = `Broker ${endpoint} ? Topic-Pr?fix ${status.topic_prefix || '?'} ? letzte Ver?ffentlichung ${lastPublish}` + (status.last_error ? ` ? Fehler: ${status.last_error}` : '');
+        } catch (error) {
+            stateElement.textContent = 'Status nicht verf?gbar';
+            indicator.className = 'mqtt-status-indicator offline';
+            detailsElement.textContent = error.message;
+        }
+    }
 
     // Alle paar Sekunden alles aktualisieren
     async function updateAll() {
@@ -152,6 +196,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateAll();
     setInterval(updateAll, 500);
+    updateMqttStatus();
+    setInterval(updateMqttStatus, 5000);
 });
 
 async function updateTemperatures() {
@@ -164,13 +210,13 @@ async function updateTemperatures() {
 
         data.temperatures.forEach(t => {
             //console.log(`temperature : ${JSON.stringify(t)}`)
-            let tempDisplay = "—";
-            if (t.temp !== null && !isNaN(t.temp)) tempDisplay = t.temp.toFixed(1) + "°C";
+            let tempDisplay = "â€”";
+            if (t.temp !== null && !isNaN(t.temp)) tempDisplay = t.temp.toFixed(1) + "Â°C";
             html += `<tr><td>${t.name}</td><td>${tempDisplay}</td></tr>`;
         });
         //console.log(html)
 
-        // Hier den Container auswählen, z.B. wo du die Tabelle haben willst
+        // Hier den Container auswÃ¤hlen, z.B. wo du die Tabelle haben willst
         const container = document.querySelector("#temperature-table");
         if (container) container.innerHTML = html;
 
@@ -191,4 +237,5 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
         });
     });
 });
+
 

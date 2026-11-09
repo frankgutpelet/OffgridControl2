@@ -301,3 +301,11 @@ table tr:hover {
 #mode-on:checked ~ label[for="mode-on"] {
     color: white;
 }
+
+
+.mqtt-status { border-color: #666; }
+.mqtt-status-line { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.mqtt-status-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.mqtt-status-indicator.online { background-color: #4caf50; }
+.mqtt-status-indicator.offline { background-color: #f44336; }
+#mqtt-status-details { overflow-wrap: anywhere; color: #ddd; }

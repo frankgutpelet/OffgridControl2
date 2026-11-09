@@ -56,12 +56,20 @@ class LoggingSettings:
     def __repr__(self):
         return f"LoggingSettings(loglevel='{self.loglevel}', file='{self.file}')"
 
+class VictronChargerSettings:
+    def __init__(self, name: str, address: str = "", key: str = ""):
+        self.name = name
+        self.address = address
+        self.key = key
+
+
 class Settings:
-    def __init__(self, battery: BatterySettings, inverter : InverterSettings, logging: LoggingSettings, file, apps: List[App]):
+    def __init__(self, battery: BatterySettings, inverter : InverterSettings, logging: LoggingSettings, file, apps: List[App], victronChargers=None):
         self.battery = battery
         self.inverter = inverter
         self.logging = logging
         self.apps = apps
+        self.victronChargers = victronChargers or []
         self.xmlFile = file
 
     def getAppByName(self, name : str):
@@ -93,6 +101,17 @@ class Settings:
             file=logging_elem.attrib.get("file", "")
         )
 
+        # Optional Victron SmartSolar BLE chargers
+        victron_elem = root.find("VictronLaders")
+        victron_chargers = [
+            VictronChargerSettings(
+                name=charger.attrib.get("name", ""),
+                address=charger.attrib.get("address", ""),
+                key=charger.attrib.get("key", "")
+            )
+            for charger in (victron_elem.findall("Lader") if victron_elem is not None else [])
+        ]
+
         # Apps
         apps = []
         for app_elem in root.find("Approvals").findall("App"):
@@ -115,7 +134,7 @@ class Settings:
                 timers=timers
             ))
 
-        return Settings(battery=battery, inverter=inverter, logging=logging, apps=apps, file=xml_file)
+        return Settings(battery=battery, inverter=inverter, logging=logging, apps=apps, file=xml_file, victronChargers=victron_chargers)
 
     def __repr__(self):
         return (f"Settings(battery={self.battery}, "
@@ -141,6 +160,16 @@ class Settings:
         logging_elem = ET.SubElement(root, "Logging")
         logging_elem.set("loglevel", self.logging.loglevel)
         logging_elem.set("file", self.logging.file)
+
+        # Victron chargers
+        victron_elem = ET.SubElement(root, "VictronLaders")
+        for charger in self.victronChargers:
+            charger_elem = ET.SubElement(victron_elem, "Lader")
+            charger_elem.set("name", charger.name)
+            if charger.address:
+                charger_elem.set("address", charger.address)
+            if charger.key:
+                charger_elem.set("key", charger.key)
 
         # Apps
         approvals_elem = ET.SubElement(root, "Approvals")

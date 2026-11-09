@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rooms>
+  <room name="Alex" channel="channel4" url="">
+      <slot id="1" time="00:00" temp="5.0" days="1-7" /></room>
+    <room name="Bad" channel="" url="http://bad-sensor.local/temp">
+        <slot id="1" time="00:00" temp="5.0" days="1-7" /></room>
+    <room name="Wohnen" channel="channel2" url="">
+        <slot id="1" time="00:00" temp="5.0" days="1-7" /></room>
+    <room name="Studio" channel="channel0" url="">
+        <actor on="http://heizungstudio/cm?cmnd=POWER%20ON" off="http://heizungstudio/cm?cmnd=POWER%20OFF" />
+        <slot id="1" time="00:00" temp="5.0" days="1-7" /></room>
+</rooms>

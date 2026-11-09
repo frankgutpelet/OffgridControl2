@@ -1,0 +1,11 @@
+﻿{
+  "broker": "192.168.10.48",
+  "port": 1883,
+  "username": "frank",
+  "password": "leberw.FG",
+  "tls": false,
+  "client_id": "offgrid-control",
+  "topic_prefix": "offgrid",
+  "publish_interval_seconds": 10,
+  "grid_power_positive_import": true
+}

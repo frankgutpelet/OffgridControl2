@@ -12,6 +12,7 @@ import traceback
 import os
 from webApi import ApiServer
 from Homey import Homey
+from VictronCharger import VictronCharger, VictronChargerManager
 
 
 supplySwitch : SonoffSwitch
@@ -23,10 +24,11 @@ inverterValues : IInverter.InverterValues
 logger : Logging
 opened_time_Settings : float
 settings : Settings
+victronManager : VictronChargerManager
 
 
 def main():
-    global supplySwitch, consumerIndex, consumers, inverter, frontEnd, frontEndThread, inverterValues, logger, opened_time_Settings, settings, heizung
+    global supplySwitch, consumerIndex, consumers, inverter, frontEnd, frontEndThread, inverterValues, logger, opened_time_Settings, settings, heizung, victronManager
     consumerIndex = 0
     logger = Logging()
     logger.setLogLevel("DEBUG")
@@ -36,13 +38,18 @@ def main():
     consumers = settings.apps
     inverter = SPF6000Inverter(logger)
     supplySwitch = SonoffSwitch(logger)
-    myHomey = Homey(inverter, logger, supplySwitch)
+    victronChargers = [
+        VictronCharger(c.name, c.address, c.key, logger)
+        for c in settings.victronChargers if c.address and c.key
+    ]
+    victronManager = VictronChargerManager(victronChargers, logger)
+    myHomey = Homey(inverter, logger, supplySwitch, victronManager)
 
     consumers = list()
     for app in settings.apps:
         consumers.append(Consumer(app, logger))
 
-    api = ApiServer(logger, supplySwitch, consumers, inverter, settings, homey=myHomey)
+    api = ApiServer(logger, supplySwitch, consumers, inverter, settings, homey=myHomey, victron=victronManager)
     api.start()
 
     inverterValues = inverter.getValues()
@@ -176,7 +183,8 @@ def handleNextConsumer(batterySettings : BatterySettings, inverterSettings : Inv
     elif(     ((batterySettings.maxCurrentA - 30) > (-inverterValues.BatteryCurrent))
         and ((inverterSettings.maxPower - 1000) > inverterValues.InverterOutputPower))\
         and (   50 < (inverterValues.PowerSolar1 + inverterValues.PowerSolar2)
-              or consumer.supply.lower() == 'battery'):
+              or consumer.supply.lower() == 'battery'
+              or (victronManager.getTotalPower() > 50)):
         logger.Debug("Approve AUTO Consumer " + str(consumerIndex))
         consumer.approve(inverterValues.SOC)
     else:

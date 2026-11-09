@@ -1,8 +1,24 @@
 <?xml version="1.0" ?>
 <Settings>
   <BatterySettings minimumSOC="35" maxCurrentA="150"/>
+  <!--
+    Victron SmartSolar per Bluetooth konfigurieren:
+    1. In VictronConnect den jeweiligen Laderegler öffnen.
+    2. Einstellungen (Zahnrad) > Produktinformationen öffnen.
+    3. "Instant Readout via Bluetooth" aktivieren.
+    4. Bei "Instant Readout Details" auf "Show" tippen.
+    5. Bluetooth-Adresse in address und Advertisement Key in key eintragen.
+    6. Für jeden Laderegler einen eigenen <Lader>-Eintrag verwenden.
+    Beispiel: <Lader name="Huette" address="AA:BB:CC:DD:EE:FF" key="0123456789abcdef0123456789abcdef" />
+    Es werden Ladestrom und Solarleistung ausgelesen; die Panelspannung wird nicht ermittelt.
+  -->
+  <VictronLaders>
+    <Lader name="Huette" address="E5:8B:B3:5B:41:3D" key="8a03aba3f0266d4b6fe40a0dab256f45" />
+    <Lader name="Balkon" address="D1:F0:DD:F5:50:06" key="ebc9c94932253955f32b991774d18518" />
+    
+  </VictronLaders>
   <InverterSettings maxPowerW="6000"/>
-  <Logging loglevel="INFO" file="log/Offgrid-[date].log"/>
+  <Logging loglevel="DEBUG" file="log/Offgrid-[date].log"/>
   <Approvals>
     <App name="BettSabrina" dns="WasserbettSabrina" prio="1" supply="" mode="AUTO" soc="60">
       <Timer soc="65" on="08:00" off="18:00"/>

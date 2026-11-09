@@ -27,7 +27,7 @@ class ApiServer:
     consumerList : list[Consumer]
     settings : Settings
 
-    def __init__(self, logger, sonoff, consumers, inverter, settings, host="0.0.0.0", port=8000, homey=None):
+    def __init__(self, logger, sonoff, consumers, inverter, settings, host="0.0.0.0", port=8000, homey=None, victron=None):
         """
         backend: Instanz deines bestehenden Backends
         host, port: Serverkonfiguration
@@ -38,6 +38,7 @@ class ApiServer:
         self.sonoff = sonoff
         self.settings = settings
         self.homey = homey
+        self.victron = victron
         self.host = host
         self.port = port
         self.app = FastAPI(
@@ -81,6 +82,12 @@ class ApiServer:
                 return {"state": "not_configured", "connected": False, "last_error": "MQTT-Modul ist nicht initialisiert"}
             return self.homey.getStatus()
 
+        @self.app.get("/api/victronValues", summary="Liefert aktuelle Victron Ladereglerwerte")
+        def get_victron_values():
+            if self.victron is None:
+                return {"chargers": [], "total_solar_power": 0}
+            return {"chargers": self.victron.getValues(), "total_solar_power": self.victron.getTotalPower()}
+
         @self.app.get("/api/inverterValues", summary="Liefert aktuelle Inverter Werte")
         async def get_inverter_values():
             return {"values": self.inverter.getValues().toJson()}
@@ -98,7 +105,7 @@ class ApiServer:
         @self.app.get("/api/get_supplyState", summary="Liefert aktuelle Supply status")
         def get_supplyState():
             values = self.inverter.getValues()
-            if SonoffSwitch.SwitchState.ON == self.sonoff.getSwitchState() and 50 > (values.PowerSolar1 + values.PowerSolar2):
+            if SonoffSwitch.SwitchState.ON == self.sonoff.getSwitchState() and 50 > (values.PowerSolar1 + values.PowerSolar2 + (self.victron.getTotalPower() if self.victron else 0)):
                 return {"supplyState": "BATTERY"}
             return {"supplyState": self.sonoff.getSwitchStateAsString()}
 
